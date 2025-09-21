@@ -1,0 +1,17 @@
+# Backend
+swaply-backend/target/
+swaply-backend/.idea/
+swaply-backend/*.iml
+
+## Frontend
+#swaply-frontend/node_modules/
+#swaply-frontend/dist/
+#swaply-frontend/.vscode/
+
+# OS junk
+.DS_Store
+Thumbs.db
+
+# Configs/secrets
+**/application-*.yml
+**/.env
