@@ -1,24 +1,107 @@
 package com.swaply.swaplybackend.controller;
 
 import com.swaply.swaplybackend.dto.UserDto;
+import com.swaply.swaplybackend.entity.User;
 import com.swaply.swaplybackend.service.IUserService;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+import java.util.Optional;
 
 @RestController
-@RequestMapping("/user")
+@RequestMapping("/api/user")
 public class UserController {
 
+private final IUserService userService;
+
     @Autowired
-    IUserService userService;
+    public UserController(IUserService userService) {
+        this.userService = userService;
+    }
 
     @PostMapping
-    public String add(@RequestBody UserDto user){
-        userService.add(user);
-        return "success";
+    public ResponseEntity<String> createUser(@RequestBody UserDto userDto) {
+        // Convert UserDto to User entity
+        User user = new User();
+        user.setUserName(userDto.getUserName());
+        user.setEmail(userDto.getEmail());
+        user.setPassword(userDto.getPassword()); //need to hash pass later
+
+        try {
+            userService.addUser(user);
+            return ResponseEntity.status(HttpStatus.CREATED).body("User created successfully");
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
+        }
     }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<UserDto> getUserById(@PathVariable Long id) {
+        Optional<User> userOpt = userService.getUserById(id);
+        if (userOpt.isPresent()) {
+            User user = userOpt.get();
+            UserDto userDto = new UserDto(user.getUserId(), user.getUserName(), user.getEmail());
+            return ResponseEntity.ok(userDto);
+        } else {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+        }
+    }
+
+    @GetMapping
+    public ResponseEntity<List<User>> getAllUsers() {
+        List<User> users = userService.getAllUsers();
+        return ResponseEntity.ok(users);
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<String> updateUser(@PathVariable Long id, @RequestBody UserDto userDto) {
+        Optional<User> userOpt = userService.getUserById(id);
+        if (userOpt.isPresent()) {
+            User userToUpdate = userOpt.get();
+            userToUpdate.setUserName(userDto.getUserName());
+            userToUpdate.setEmail(userDto.getEmail());
+            // Only update password if it's provided
+            if (userDto.getPassword() != null && !userDto.getPassword().isEmpty()) {
+                userToUpdate.setPassword(userDto.getPassword()); //need to hash pass later
+            }
+            try {
+                userService.updateUser(userToUpdate);
+                return ResponseEntity.ok("User updated successfully");
+            } catch (RuntimeException e) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
+            }
+        } else {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("User not found");
+        }
+
+    }
+
+    @GetMapping ("/username/{username}")
+    public ResponseEntity<UserDto> getUserByUsername(@PathVariable String username) {
+        Optional <User> user = userService.getUserByUserName(username);
+        if (user.isPresent()) {
+            User foundUser = user.get();
+            UserDto userDto = new UserDto(foundUser.getUserId(), foundUser.getUserName(), foundUser.getEmail());
+            return ResponseEntity.ok(userDto);
+        } else {
+            return  ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+        }
+    }
+
+    @GetMapping("/email/{email}")
+    public ResponseEntity<UserDto> getUserByEmail(@PathVariable String email) {
+        Optional<User> user = userService.getUserByEmail(email);
+        if (user.isPresent()) {
+            User foundUser = user.get();
+            UserDto userDto = new UserDto(foundUser.getUserId(), foundUser.getUserName(), foundUser.getEmail());
+            return ResponseEntity.ok(userDto);
+        } else {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+        }
+    }
+
 
 }
