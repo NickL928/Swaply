@@ -24,6 +24,14 @@ private final IUserService userService;
 
     @PostMapping
     public ResponseEntity<String> createUser(@RequestBody UserDto userDto) {
+
+        if (userDto.getUserName() == null || userDto.getUserName().trim().isEmpty()) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Username is required");
+        }
+        if (userDto.getEmail() == null || !userDto.getEmail().contains("@")) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Valid email is required");
+        }
+
         // Convert UserDto to User entity
         User user = new User();
         user.setUserName(userDto.getUserName());
@@ -100,6 +108,16 @@ private final IUserService userService;
             return ResponseEntity.ok(userDto);
         } else {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+        }
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<String> deleteUser(@PathVariable Long id) {
+        try {
+            userService.deleteUser(id);
+            return ResponseEntity.ok("User deleted");
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
         }
     }
 
