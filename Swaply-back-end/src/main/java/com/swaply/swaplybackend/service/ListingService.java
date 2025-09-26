@@ -30,11 +30,9 @@ public class ListingService implements IListingService {
 
     @Override
     public ListingDto createListing(CreateListingDto createListingDto, Long userId) {
-        // Validate user existence
-        User user = userRepository.findById(createListingDto.getUserId()).get();
-        if (user == null) {
-            throw new InvalidListingException("User with ID " + createListingDto.getUserId() + " does not exist.");
-        }
+        // 使用路径参数中的userId，而不是DTO中的userId
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new InvalidListingException("User with ID " + userId + " does not exist."));
 
         // Create new listing entity
         Listing listing = new Listing();
@@ -52,6 +50,7 @@ public class ListingService implements IListingService {
         Listing savedListing = listingRepository.save(listing);
         return convertToDto(savedListing);
     }
+
 
     @Override
     public ListingDto getListingById(Long id) {
