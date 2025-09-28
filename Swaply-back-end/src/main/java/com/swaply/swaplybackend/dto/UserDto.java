@@ -1,11 +1,20 @@
 package com.swaply.swaplybackend.dto;
 
+import com.swaply.swaplybackend.enums.UserRole;
+
+import java.time.LocalDateTime;
+
 public class UserDto {
     private Long userId;
     private String userName;
     private String email;
     private String password;
+    private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
+    private Boolean isActive;
+    private UserRole role;
 
+    //Constructors
     public UserDto() {}
 
     public UserDto(Long userId, String userName, String email, String password) {
@@ -16,7 +25,7 @@ public class UserDto {
     }
 
     //does not include password for security reasons
-    public UserDto(long userId, String userName, String email) {
+    public UserDto(Long userId, String userName, String email) {
         this.userId = userId;
         this.userName = userName;
         this.email = email;
@@ -48,6 +57,37 @@ public class UserDto {
     public void setPassword(String password) {
         this.password = password;
     }
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(LocalDateTime createdAt) {
+        this.createdAt = createdAt;
+    }
+
+    public LocalDateTime getUpdatedAt() {
+        return updatedAt;
+    }
+
+    public void setUpdatedAt(LocalDateTime updatedAt) {
+        this.updatedAt = updatedAt;
+    }
+
+    public Boolean getIsActive() {
+        return isActive;
+    }
+
+    public void setIsActive(Boolean isActive) {
+        this.isActive = isActive;
+    }
+
+    public UserRole getRole() {
+        return role;
+    }
+
+    public void setRole(UserRole role) {
+        this.role = role;
+    }
 
     @Override
     public String toString() {
@@ -55,7 +95,10 @@ public class UserDto {
                 "userId=" + userId +
                 ", userName='" + userName + '\'' +
                 ", email='" + email + '\'' +
-                ", password='" + password + '\'' +
+                ", createdAt=" + createdAt +
+                ", updatedAt=" + updatedAt +
+                ", isActive=" + isActive +
+                ", role=" + role +
                 '}';
     }
 }
