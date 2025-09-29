@@ -3,6 +3,7 @@
   <component name="ProjectModuleManager">
     <modules>
       <module fileurl="file://$PROJECT_DIR$/.idea/Swaply.iml" filepath="$PROJECT_DIR$/.idea/Swaply.iml" />
+      <module fileurl="file://$PROJECT_DIR$/Swaply-back-end/Swaply-back-end.iml" filepath="$PROJECT_DIR$/Swaply-back-end/Swaply-back-end.iml" />
     </modules>
   </component>
 </project>
