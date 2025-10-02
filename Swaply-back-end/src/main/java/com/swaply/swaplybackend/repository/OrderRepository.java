@@ -23,7 +23,7 @@ public interface OrderRepository extends JpaRepository<Order,Long> {
     // Find order by status
     List<Order> findByStatus(OrderStatus status);
 
-    // Find by buyer amd status
+    // Find by buyer and status
     List<Order> findByBuyerUserIdAndStatus(Long buyerId, OrderStatus status);
 
     // Find by seller and status
@@ -34,5 +34,5 @@ public interface OrderRepository extends JpaRepository<Order,Long> {
     Optional<Order> findByListingListingId(Long listingId);
 
     // Check if user has ordered a specific listing
-    Optional<Order> findByBuyerIdAndListingId(Long buyerId, Long listingId);
+    Optional<Order> findByBuyerUserIdAndListingListingId(Long buyerId, Long listingId);
 }

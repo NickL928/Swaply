@@ -10,18 +10,13 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
-import com.swaply.swaplybackend.entity.Listing;
-import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.stereotype.Repository;
-
 import java.util.List;
 
 @Repository
 public interface ListingRepository extends JpaRepository<Listing, Long> {
 
     //query methods
-    List<Listing> findByUser(User user);
-    List<Listing> findByUserId(Long userId);
+    List<Listing> findByUserUserId(Long userId);
     List<Listing> findByStatus(ListingStatus status);
     List<Listing> findByCategory(Category category);
     List<Listing> findByCondition(ListingCondition condition);
@@ -43,8 +38,6 @@ public interface ListingRepository extends JpaRepository<Listing, Long> {
             "LOWER(l.description) LIKE LOWER(CONCAT('%', :keyword, '%'))) AND " + "l.status = :status")
     List<Listing> searchByKeywordAndStatus(@Param("keyword") String keyword, @Param("status") ListingStatus status);
 
-    //count listings by user
-    Long countByUser(User user);
 
     Long countByUserUserId(Long userId);
 

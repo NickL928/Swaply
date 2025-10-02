@@ -78,7 +78,7 @@ public class ListingService implements IListingService {
 
     @Override
     public List<ListingDto> getListingsByUserId(Long userId) {
-        List<Listing> listings = listingRepository.findByUserId(userId);
+        List<Listing> listings = listingRepository.findByUserUserId(userId);
         return listings.stream()
                 .map(this::convertToDto)
                 .collect(Collectors.toList());

@@ -22,7 +22,7 @@ public class UserService implements IUserService{
     }
 
     @Override
-    public Optional<User> getUserById(long userId) {
+    public Optional<User> getUserById(Long userId) {
         return userRepository.findById(userId);
     }
 
@@ -50,7 +50,7 @@ public class UserService implements IUserService{
     }
 
     @Override
-    public void deleteUser(long userId) {
+    public void deleteUser(Long userId) {
         if (userRepository.existsById(userId)) {
             userRepository.deleteById(userId);
         } else {
