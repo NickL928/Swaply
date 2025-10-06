@@ -72,4 +72,5 @@ public class UserService implements IUserService{
     public Optional<User> getUserByEmail(String email) {
         return userRepository.findByEmail(email);
     }
+
 }

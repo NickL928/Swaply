@@ -1,6 +1,8 @@
 package com.swaply.swaplybackend.service;
 
 import com.swaply.swaplybackend.entity.User;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 
 import java.util.List;
 import java.util.Optional;
