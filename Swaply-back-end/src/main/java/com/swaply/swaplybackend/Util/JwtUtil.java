@@ -44,6 +44,19 @@ public class JwtUtil {
         return createToken(claims, username);
     }
 
+    public String generateToken(String username, String role) {
+        Map<String, Object> claims = new HashMap<>();
+        // Add role claim to JWT token
+        String userRole = (role != null && !role.trim().isEmpty()) ? role : "USER";
+        claims.put("role", "ROLE_" + userRole);
+        return createToken(claims, username);
+    }
+
+    // Method to extract role from token
+    public String extractRole(String token) {
+        return extractClaim(token, claims -> claims.get("role", String.class));
+    }
+
     private String createToken(Map<String, Object> claims, String username) {
         return Jwts.builder()
                 .setClaims(claims)

@@ -1,22 +1,22 @@
 package com.swaply.swaplybackend.dto;
 
 public class LoginRequestDto {
-    private String username;
+    private String userName;
     private String password;
 
     public LoginRequestDto() {}
 
-    public LoginRequestDto(String username, String password) {
-        this.username = username;
+    public LoginRequestDto(String userName, String password) {
+        this.userName = userName;
         this.password = password;
     }
 
-    public String getUsername() {
-        return username;
+    public String getUserName() {
+        return userName;
     }
 
-    public void setUsername(String username) {
-        this.username = username;
+    public void setUserName(String userName) {
+        this.userName = userName;
     }
 
     public String getPassword() {

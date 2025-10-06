@@ -27,7 +27,7 @@ public class AuthService {
     public LoginResponseDto login(LoginRequestDto loginRequest) {
 
         //find user by username
-        Optional<User> userOptional = userRepository.findByUserName(loginRequest.getUsername());
+        Optional<User> userOptional = userRepository.findByUserName(loginRequest.getUserName());
         if (userOptional.isEmpty()) {
             throw new RuntimeException("Username not found");
         }
@@ -40,7 +40,8 @@ public class AuthService {
         }
 
         //generate token
-        String token = jwtUtil.generateToken(user.getUserName());
+        String userRole = (user.getRole() != null) ? user.getRole().name() : "USER";
+        String token = jwtUtil.generateToken(user.getUserName(), userRole);
 
         //convert to userDto
         UserDto userDto = convertToUserDto(user);
