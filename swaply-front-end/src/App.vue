@@ -1,25 +1,62 @@
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import HomePage from './HomePage.vue'
 import PostItemPage from './PostItemPage.vue'
+import AuthPage from './AuthPage.vue'
 
+// track current internal page AFTER authentication
 const currentPage = ref('home')
+// authentication state
+const isAuthenticated = ref(false)
+// store user info
+const currentUser = ref(null)
+
+onMounted(() => {
+  const token = localStorage.getItem('token')
+  if (token) {
+    isAuthenticated.value = true
+    try {
+      currentUser.value = JSON.parse(localStorage.getItem('user'))
+    } catch (e) { /* ignore parse error */ }
+  }
+})
 
 const handleNavigation = (page) => {
   currentPage.value = page
+}
+
+const handleLoginSuccess = (user) => {
+  currentUser.value = user
+  isAuthenticated.value = true
+  currentPage.value = 'home'
+}
+
+const handleLogout = () => {
+  localStorage.removeItem('token')
+  localStorage.removeItem('user')
+  isAuthenticated.value = false
+  currentUser.value = null
+  currentPage.value = 'home'
 }
 </script>
 
 <template>
   <div id="app">
-    <HomePage
-      v-if="currentPage === 'home'"
-      @navigate="handleNavigation"
-    />
-    <PostItemPage
-      v-if="currentPage === 'post-item'"
-      @navigate="handleNavigation"
-    />
+    <!-- Show auth screen until logged in -->
+    <AuthPage v-if="!isAuthenticated" @login-success="handleLoginSuccess" />
+
+    <!-- Main app after auth -->
+    <template v-else>
+      <HomePage
+        v-if="currentPage === 'home'"
+        @navigate="handleNavigation"
+        @logout="handleLogout"
+      />
+      <PostItemPage
+        v-if="currentPage === 'post-item'"
+        @navigate="handleNavigation"
+      />
+    </template>
   </div>
 </template>
 

@@ -15,3 +15,5 @@ Thumbs.db
 # Configs/secrets
 **/application-*.yml
 **/.env
+
+uploads/

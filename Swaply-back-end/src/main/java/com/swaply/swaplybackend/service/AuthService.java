@@ -26,10 +26,15 @@ public class AuthService {
 
     public LoginResponseDto login(LoginRequestDto loginRequest) {
 
-        //find user by username
-        Optional<User> userOptional = userRepository.findByUserName(loginRequest.getUserName());
+        String identifier = loginRequest.getUserName(); // can be username OR email
+        //find user by username first
+        Optional<User> userOptional = userRepository.findByUserName(identifier);
         if (userOptional.isEmpty()) {
-            throw new RuntimeException("Username not found");
+            //fallback to email lookup
+            userOptional = userRepository.findByEmail(identifier);
+            if (userOptional.isEmpty()) {
+                throw new RuntimeException("User not found");
+            }
         }
 
         User user = userOptional.get();

@@ -31,6 +31,9 @@
           <p>{{ isLogin ? 'Sign in to your account' : 'Join Swaply today' }}</p>
         </div>
 
+        <div v-if="errorMessage" class="alert error">{{ errorMessage }}</div>
+        <div v-if="successMessage" class="alert success">{{ successMessage }}</div>
+
         <div class="auth-tabs">
           <button
               :class="{ active: isLogin }"
@@ -49,20 +52,33 @@
         </div>
 
         <form @submit.prevent="handleSubmit" class="auth-form">
-          <!-- Registration only fields -->
-          <div v-if="!isLogin" class="form-group">
-            <label for="fullName">Full Name</label>
+          <!-- Login identifier (username or email) -->
+          <div v-if="isLogin" class="form-group">
+            <label for="identifier">Username or Email</label>
             <input
-                id="fullName"
-                v-model="form.fullName"
-                type="text"
-                required
-                placeholder="Enter your full name"
+              id="identifier"
+              v-model="form.identifier"
+              type="text"
+              required
+              placeholder="Enter username or email"
+              autocomplete="username"
             />
           </div>
 
-          <!-- Email field -->
-          <div class="form-group">
+          <!-- Registration only fields -->
+          <div v-if="!isLogin" class="form-group">
+            <label for="userName">Username</label>
+            <input
+                id="userName"
+                v-model="form.userName"
+                type="text"
+                required
+                placeholder="Choose a username"
+                autocomplete="username"
+            />
+          </div>
+
+          <div v-if="!isLogin" class="form-group">
             <label for="email">Email</label>
             <input
                 id="email"
@@ -70,6 +86,7 @@
                 type="email"
                 required
                 placeholder="Enter your email"
+                autocomplete="email"
             />
           </div>
 
@@ -83,6 +100,7 @@
                   :type="showPassword ? 'text' : 'password'"
                   required
                   :placeholder="isLogin ? 'Enter your password' : 'Create a password'"
+                  autocomplete="current-password"
               />
               <button
                   type="button"
@@ -103,6 +121,7 @@
                 type="password"
                 required
                 placeholder="Confirm your password"
+                autocomplete="new-password"
             />
           </div>
 
@@ -147,13 +166,18 @@
 
 <script setup>
 import { ref, reactive } from 'vue'
+import authApi from './services/authApi.js'
+const emit = defineEmits(['login-success'])
 
 const isLogin = ref(true)
 const showPassword = ref(false)
 const loading = ref(false)
+const errorMessage = ref('')
+const successMessage = ref('')
 
 const form = reactive({
-  fullName: '',
+  identifier: '', // used only for login (username OR email)
+  userName: '',
   email: '',
   password: '',
   confirmPassword: '',
@@ -161,43 +185,75 @@ const form = reactive({
   acceptTerms: false
 })
 
-const handleSubmit = async () => {
-  loading.value = true
+function resetMessages() {
+  errorMessage.value = ''
+  successMessage.value = ''
+}
 
+function resetForm() {
+  form.identifier = ''
+  form.userName = ''
+  form.email = ''
+  form.password = ''
+  form.confirmPassword = ''
+  form.rememberMe = false
+  form.acceptTerms = false
+}
+
+const handleSubmit = async () => {
+  resetMessages()
+  loading.value = true
   try {
     if (isLogin.value) {
-      // Login logic
-      console.log('Logging in with:', { email: form.email, password: form.password })
-      // Add your login API call here
-    } else {
-      // Registration logic
-      if (form.password !== form.confirmPassword) {
-        alert('Passwords do not match!')
+      const identifier = form.identifier?.trim()
+      if (!identifier) {
+        errorMessage.value = 'Please enter username or email'
         return
       }
-      console.log('Registering with:', {
-        fullName: form.fullName,
-        email: form.email,
-        password: form.password
-      })
-      // Add your registration API call here
+      const { data } = await authApi.login({ userName: identifier, password: form.password })
+      localStorage.setItem('token', data.token)
+      localStorage.setItem('user', JSON.stringify(data.user))
+      successMessage.value = 'Login successful!'
+      emit('login-success', data.user)
+      if (!form.rememberMe) {
+        // Optionally could move token to sessionStorage; keeping localStorage for simplicity
+      }
+    } else {
+      // registration path
+      if (form.password !== form.confirmPassword) {
+        errorMessage.value = 'Passwords do not match'
+        return
+      }
+      if (!form.acceptTerms) {
+        errorMessage.value = 'You must accept the terms to continue'
+        return
+      }
+      const payload = { userName: form.userName, email: form.email, password: form.password }
+      await authApi.register(payload)
+      successMessage.value = 'Registration successful! You can now sign in.'
+      setTimeout(() => {
+        isLogin.value = true
+        resetForm()
+        resetMessages()
+      }, 1200)
     }
-  } catch (error) {
-    console.error('Authentication error:', error)
+  } catch (e) {
+    if (e.response) {
+      if (e.response.status === 401) {
+        errorMessage.value = 'Invalid credentials'
+      } else if (e.response.status === 400) {
+        errorMessage.value = (e.response.data?.message) ? e.response.data.message : 'Request failed'
+      } else {
+        errorMessage.value = 'Server error (' + e.response.status + ')'
+      }
+    } else {
+      errorMessage.value = 'Network error. Please try again.'
+    }
   } finally {
     loading.value = false
   }
 }
 
-const handleGoogleAuth = () => {
-  console.log('Google authentication')
-  // Add Google OAuth logic here
-}
-
-const handleFacebookAuth = () => {
-  console.log('Facebook authentication')
-  // Add Facebook OAuth logic here
-}
 </script>
 
 <style scoped>
@@ -586,5 +642,25 @@ const handleFacebookAuth = () => {
   .feature {
     font-size: 1rem;
   }
+}
+
+.alert {
+  padding: 1rem 1.25rem;
+  border-radius: 12px;
+  margin-bottom: 1.25rem;
+  font-weight: 500;
+  font-size: 0.95rem;
+  border: 1px solid transparent;
+  text-align: center;
+}
+.alert.error {
+  background: #fee2e2;
+  color: #b91c1c;
+  border-color: #fecaca;
+}
+.alert.success {
+  background: #dcfce7;
+  color: #166534;
+  border-color: #bbf7d0;
 }
 </style>

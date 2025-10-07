@@ -32,7 +32,7 @@ public class Listing {
     private Category category;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "condition")
+    @Column(name = "`condition`")
     private ListingCondition condition;
 
     @Enumerated(EnumType.STRING)

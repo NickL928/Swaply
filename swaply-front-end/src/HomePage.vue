@@ -27,6 +27,7 @@
           <div class="profile-section">
             <img alt="Profile" class="profile-picture" src="./assets/logo.svg" width="40" height="40" />
           </div>
+          <button class="logout-button" @click="logout">Logout</button>
         </div>
       </div>
     </header>
@@ -48,6 +49,11 @@
         </div>
       </div>
 
+      <div class="status-bar" v-if="loading || errorMessage">
+        <span v-if="loading">Loading listings...</span>
+        <span v-else class="error-text">{{ errorMessage }}</span>
+      </div>
+
       <!-- Filter Buttons -->
       <div class="filter-section">
         <button
@@ -55,7 +61,7 @@
           :class="{ active: activeFilter === 'all' }"
           @click="setFilter('all')"
         >
-          For Sale
+          All Active
         </button>
         <button
           class="filter-button"
@@ -66,34 +72,38 @@
         </button>
         <button
           class="filter-button"
-          :class="{ active: activeFilter === 'request' }"
-          @click="setFilter('request')"
+          :class="{ active: activeFilter === 'category' }"
+          @click="cycleCategory()"
         >
-          Buy Request
+          {{ categoryFilterLabel }}
         </button>
       </div>
 
       <!-- Items Grid -->
       <div class="items-grid">
         <div
-          v-for="item in filteredItems"
-          :key="item.id"
+          v-for="item in pagedItems"
+          :key="item.listingId"
           class="item-card"
           @click="selectItem(item)"
         >
           <div class="item-image">
-            <img :src="item.image" :alt="item.title" />
+            <img :src="resolveImage(item.imageUrl)" :alt="item.title" />
           </div>
           <div class="item-content">
             <h3 class="item-title">{{ item.title }}</h3>
-            <p class="item-price">{{ item.price }}</p>
-            <p class="item-description">{{ item.description }}</p>
+            <p class="item-price">{{ formatPrice(item.price) }}</p>
+            <p class="item-description ellipsis">{{ item.description }}</p>
+            <div class="meta-row">
+              <span class="badge category">{{ prettyEnum(item.category) }}</span>
+              <span class="badge condition">{{ prettyEnum(item.condition) }}</span>
+            </div>
           </div>
         </div>
       </div>
 
       <!-- Pagination -->
-      <div class="pagination">
+      <div class="pagination" v-if="!loading && pagedItems.length">
         <button
           class="pagination-button"
           :disabled="currentPage === 1"
@@ -116,128 +126,121 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
+import listingApi from './services/listingApi.js'
 
-const emit = defineEmits(['navigate'])
+const emit = defineEmits(['navigate','logout'])
 
 const searchQuery = ref('')
 const activeFilter = ref('all')
 const currentPage = ref(1)
 const itemsPerPage = 6
+const loading = ref(false)
+const errorMessage = ref('')
+const listings = ref([])
+const categoryCycle = ['ELECTRONICS','BOOKS','FURNITURE','CLOTHING','SPORTS','NECESSITIES','TOYS_GAMES','OTHER']
+const categoryIndex = ref(0)
 
-// Mock data for items
-const items = ref([
-  {
-    id: 1,
-    title: 'Vintage Camera',
-    price: '$120',
-    description: 'Classic film camera in excellent condition',
-    image: './assets/logo.svg',
-    category: 'electronics'
-  },
-  {
-    id: 2,
-    title: 'Designer Handbag',
-    price: '$85',
-    description: 'Authentic leather handbag, barely used',
-    image: './assets/logo.svg',
-    category: 'fashion'
-  },
-  {
-    id: 3,
-    title: 'Gaming Console',
-    price: '$200',
-    description: 'PlayStation 4 with controllers and games',
-    image: './assets/logo.svg',
-    category: 'electronics'
-  },
-  {
-    id: 4,
-    title: 'Bicycle',
-    price: '$150',
-    description: 'Mountain bike in great condition',
-    image: './assets/logo.svg',
-    category: 'sports'
-  },
-  {
-    id: 5,
-    title: 'Textbooks',
-    price: '$45',
-    description: 'Computer Science textbooks bundle',
-    image: './assets/logo.svg',
-    category: 'books'
-  },
-  {
-    id: 6,
-    title: 'Coffee Maker',
-    price: '$60',
-    description: 'Espresso machine with milk frother',
-    image: './assets/logo.svg',
-    category: 'appliances'
-  },
-  {
-    id: 7,
-    title: 'Smartphone',
-    price: '$300',
-    description: 'iPhone in excellent condition with case',
-    image: './assets/logo.svg',
-    category: 'electronics'
-  },
-  {
-    id: 8,
-    title: 'Guitar',
-    price: '$180',
-    description: 'Acoustic guitar perfect for beginners',
-    image: './assets/logo.svg',
-    category: 'music'
+const placeholderImage = './assets/logo.svg'
+
+const fetchListings = async () => {
+  loading.value = true
+  errorMessage.value = ''
+  try {
+    const { data } = await listingApi.getActiveListings()
+    listings.value = data || []
+  } catch (e) {
+    errorMessage.value = 'Failed to load listings'
+    console.error(e)
+  } finally {
+    loading.value = false
   }
-])
+}
 
-const filteredItems = computed(() => {
-  let filtered = items.value
+onMounted(fetchListings)
 
-  // Apply search filter
-  if (searchQuery.value) {
-    filtered = filtered.filter(item =>
-      item.title.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
-      item.description.toLowerCase().includes(searchQuery.value.toLowerCase())
-    )
-  }
-
-  // Apply pagination
-  const start = (currentPage.value - 1) * itemsPerPage
-  const end = start + itemsPerPage
-  return filtered.slice(start, end)
+const categoryFilter = computed(() => activeFilter.value === 'category' ? categoryCycle[categoryIndex.value] : null)
+const categoryFilterLabel = computed(() => {
+  return activeFilter.value === 'category' ? 'Category: ' + prettyEnum(categoryCycle[categoryIndex.value]) : 'Filter Category'
 })
 
-const totalPages = computed(() => {
-  return Math.ceil(items.value.length / itemsPerPage)
+const filteredItems = computed(() => {
+  let items = listings.value
+    .filter(l => l.status === 'ACTIVE')
+
+  if (activeFilter.value === 'category' && categoryFilter.value) {
+    items = items.filter(i => i.category === categoryFilter.value)
+  }
+
+  if (searchQuery.value) {
+    const q = searchQuery.value.toLowerCase()
+    items = items.filter(i =>
+      i.title?.toLowerCase().includes(q) ||
+      i.description?.toLowerCase().includes(q) ||
+      i.category?.toLowerCase().includes(q) ||
+      i.condition?.toLowerCase().includes(q)
+    )
+  }
+  return items
+})
+
+const totalPages = computed(() => Math.max(1, Math.ceil(filteredItems.value.length / itemsPerPage)))
+
+const pagedItems = computed(() => {
+  const start = (currentPage.value - 1) * itemsPerPage
+  return filteredItems.value.slice(start, start + itemsPerPage)
 })
 
 const setFilter = (filter) => {
   if (filter === 'sell') {
-    // Navigate to post item page instead of filtering
     emit('navigate', 'post-item')
     return
   }
-
   activeFilter.value = filter
   currentPage.value = 1
 }
 
-const changePage = (page) => {
-  if (page >= 1 && page <= totalPages.value) {
-    currentPage.value = page
+const cycleCategory = () => {
+  if (activeFilter.value !== 'category') {
+    activeFilter.value = 'category'
+    categoryIndex.value = 0
+  } else {
+    categoryIndex.value = (categoryIndex.value + 1) % categoryCycle.length
   }
+  currentPage.value = 1
+}
+
+const changePage = (page) => {
+  if (page >= 1 && page <= totalPages.value) currentPage.value = page
 }
 
 const selectItem = (item) => {
-  console.log('Selected item:', item)
-  // Add item selection logic here
+  console.log('Selected item:', item.listingId)
 }
 
-onMounted(() => {
-  // Initialize component
-})
+const logout = () => emit('logout')
+
+const formatPrice = (price) => {
+  if (price == null) return '$—'
+  const num = typeof price === 'number' ? price : parseFloat(price)
+  if (isNaN(num)) return '$—'
+  return num.toLocaleString(undefined, { style: 'currency', currency: 'USD' })
+}
+
+const prettyEnum = (val) => {
+  if (!val) return ''
+  return val
+    .toLowerCase()
+    .split('_')
+    .map(w => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(' ')
+}
+
+const resolveImage = (path) => {
+  if (!path) return placeholderImage
+  if (path.startsWith('http://') || path.startsWith('https://')) return path
+  if (path.startsWith('/uploads/')) return listingApi.BASE_URL + path
+  return path
+}
 </script>
 
 <style scoped>
@@ -369,6 +372,26 @@ onMounted(() => {
 .profile-picture:hover {
   border-color: rgba(255, 255, 255, 0.6);
   transform: scale(1.05);
+}
+
+.logout-button {
+  background: #ef4444;
+  color: #fff;
+  border: none;
+  padding: 0.65rem 1rem;
+  border-radius: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background .25s, transform .25s;
+}
+
+.logout-button:hover {
+  background: #dc2626;
+  transform: translateY(-2px);
+}
+
+.logout-button:active {
+  transform: translateY(0);
 }
 
 /* Main Content */
@@ -682,4 +705,11 @@ onMounted(() => {
     font-size: 1.5rem;
   }
 }
+
+.status-bar { text-align:center; margin-bottom:1rem; font-weight:600; }
+.error-text { color:#b91c1c; }
+.meta-row { display:flex; gap:.5rem; margin-top:.75rem; flex-wrap:wrap; }
+.badge { background:#eef2ff; color:#4338ca; padding:.35rem .7rem; border-radius:12px; font-size:.7rem; font-weight:600; letter-spacing:.5px; text-transform:uppercase; }
+.badge.condition { background:#f1f5f9; color:#475569; }
+.ellipsis { display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
 </style>

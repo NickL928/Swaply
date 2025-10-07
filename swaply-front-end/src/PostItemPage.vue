@@ -38,15 +38,15 @@
           <h1 class="form-title">Post Item</h1>
 
           <form @submit.prevent="handleSubmit" class="post-form">
-            <!-- Name Field -->
+            <!-- Title Field -->
             <div class="form-group">
-              <label for="name" class="form-label">Name</label>
+              <label for="title" class="form-label">Title</label>
               <input
-                id="name"
-                v-model="form.name"
+                id="title"
+                v-model="form.title"
                 type="text"
                 class="form-input"
-                placeholder="Enter item name"
+                placeholder="Enter item title"
                 required
               />
             </div>
@@ -57,9 +57,11 @@
               <input
                 id="price"
                 v-model="form.price"
-                type="text"
+                type="number"
+                step="0.01"
+                min="0"
                 class="form-input"
-                placeholder="Enter price (e.g., $50)"
+                placeholder="Enter price (e.g., 49.99)"
                 required
               />
             </div>
@@ -77,45 +79,29 @@
                   class="file-input"
                   multiple
                 />
-                <button
-                  type="button"
-                  @click="triggerFileUpload"
-                  class="upload-button"
-                >
+                <button type="button" @click="triggerFileUpload" class="upload-button">
                   Upload picture
                 </button>
                 <div v-if="uploadedImages.length > 0" class="uploaded-images">
-                  <div
-                    v-for="(image, index) in uploadedImages"
-                    :key="index"
-                    class="image-preview"
-                  >
-                    <img :src="image.preview" :alt="image.name" />
-                    <button
-                      type="button"
-                      @click="removeImage(index)"
-                      class="remove-image"
-                    >
-                      ×
-                    </button>
+                  <div v-for="(image, index) in uploadedImages" :key="index" class="image-preview">
+                    <img :src="image.preview" :alt="image.fileName" />
+                    <button type="button" @click="removeImage(index)" class="remove-image">×</button>
                   </div>
                 </div>
               </div>
             </div>
 
-            <!-- Listing Status -->
+            <!-- Condition -->
             <div class="form-group">
-              <label for="listingStatus" class="form-label">Listing Status</label>
+              <label for="condition" class="form-label">Condition</label>
               <select
-                id="listingStatus"
-                v-model="form.listingStatus"
+                id="condition"
+                v-model="form.condition"
                 class="form-select"
                 required
               >
-                <option value="">Select listing status</option>
-                <option value="available">Available</option>
-                <option value="pending">Pending</option>
-                <option value="sold">Sold</option>
+                <option value="">Select condition</option>
+                <option v-for="c in conditions" :key="c.value" :value="c.value">{{ c.label }}</option>
               </select>
             </div>
 
@@ -129,22 +115,16 @@
                 required
               >
                 <option value="">Select category</option>
-                <option value="electronics">Electronics</option>
-                <option value="fashion">Fashion</option>
-                <option value="sports">Sports</option>
-                <option value="books">Books</option>
-                <option value="appliances">Appliances</option>
-                <option value="music">Music</option>
-                <option value="other">Other</option>
+                <option v-for="c in categories" :key="c.value" :value="c.value">{{ c.label }}</option>
               </select>
             </div>
 
-            <!-- Details -->
+            <!-- Description -->
             <div class="form-group">
-              <label for="details" class="form-label">Details</label>
+              <label for="description" class="form-label">Description</label>
               <textarea
-                id="details"
-                v-model="form.details"
+                id="description"
+                v-model="form.description"
                 class="form-textarea"
                 placeholder="Describe your item in detail..."
                 rows="6"
@@ -178,41 +158,64 @@
 
 <script setup>
 import { ref, reactive } from 'vue'
+import listingApi from './services/listingApi.js'
 
 const emit = defineEmits(['navigate'])
 
 const loading = ref(false)
 const fileInput = ref(null)
-const uploadedImages = ref([])
+const uploadedImages = ref([]) // { fileName, url, preview }
+
+const categories = [
+  { value: 'ELECTRONICS', label: 'Electronics' },
+  { value: 'BOOKS', label: 'Books' },
+  { value: 'FURNITURE', label: 'Furniture' },
+  { value: 'CLOTHING', label: 'Clothing' },
+  { value: 'SPORTS', label: 'Sports' },
+  { value: 'NECESSITIES', label: 'Necessities' },
+  { value: 'TOYS_GAMES', label: 'Toys & Games' },
+  { value: 'OTHER', label: 'Other' }
+]
+
+const conditions = [
+  { value: 'NEW', label: 'New' },
+  { value: 'LIKE_NEW', label: 'Like New' },
+  { value: 'GOOD', label: 'Good' },
+  { value: 'FAIR', label: 'Fair' },
+  { value: 'POOR', label: 'Poor' }
+]
 
 const form = reactive({
-  name: '',
+  title: '',
   price: '',
-  listingStatus: '',
   category: '',
-  details: ''
+  condition: '',
+  description: ''
 })
 
 const triggerFileUpload = () => {
   fileInput.value?.click()
 }
 
-const handleFileUpload = (event) => {
+const handleFileUpload = async (event) => {
   const files = Array.from(event.target.files)
-
-  files.forEach(file => {
+  for (const file of files) {
     if (file && file.type.startsWith('image/')) {
-      const reader = new FileReader()
-      reader.onload = (e) => {
+      try {
+        const { data } = await listingApi.uploadImage(file)
         uploadedImages.value.push({
-          file: file,
-          name: file.name,
-          preview: e.target.result
+          fileName: data.fileName,
+          url: data.url, // relative server path /uploads/...
+          preview: listingApi.BASE_URL + data.url
         })
+      } catch (e) {
+        console.error('Upload failed for', file.name, e)
+        alert('Failed to upload ' + file.name)
       }
-      reader.readAsDataURL(file)
     }
-  })
+  }
+  // reset input so same file can be reselected if removed
+  event.target.value = ''
 }
 
 const removeImage = (index) => {
@@ -220,48 +223,39 @@ const removeImage = (index) => {
 }
 
 const handleSubmit = async () => {
+  if (!form.title || !form.price || !form.category || !form.condition || !form.description) return
   loading.value = true
-
   try {
-    // Create form data for submission
-    const formData = new FormData()
-    formData.append('name', form.name)
-    formData.append('price', form.price)
-    formData.append('listingStatus', form.listingStatus)
-    formData.append('category', form.category)
-    formData.append('details', form.details)
+    const userRaw = localStorage.getItem('user')
+    if (!userRaw) throw new Error('User not authenticated')
+    const user = JSON.parse(userRaw)
+    const userId = user.userId || user.id
 
-    // Add images to form data
-    uploadedImages.value.forEach((image, index) => {
-      formData.append(`image_${index}`, image.file)
-    })
+    const imageUrl = uploadedImages.value[0]?.url || null // store relative path; backend expects string
 
-    console.log('Submitting item:', {
-      name: form.name,
-      price: form.price,
-      listingStatus: form.listingStatus,
+    const payload = {
+      title: form.title,
+      description: form.description,
+      price: parseFloat(form.price),
       category: form.category,
-      details: form.details,
-      images: uploadedImages.value.length
-    })
+      condition: form.condition,
+      imageUrl
+    }
 
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 2000))
+    const { data } = await listingApi.createListing(userId, payload)
 
-    alert('Item posted successfully!')
-
-    // Reset form
-    Object.keys(form).forEach(key => {
-      form[key] = ''
-    })
+    form.title = ''
+    form.price = ''
+    form.category = ''
+    form.condition = ''
+    form.description = ''
     uploadedImages.value = []
 
-    // Navigate back to home
+    alert('Listing created successfully (ID: ' + data.listingId + ')')
     goToHome()
-
-  } catch (error) {
-    console.error('Error posting item:', error)
-    alert('Error posting item. Please try again.')
+  } catch (e) {
+    console.error('Create listing failed', e)
+    alert('Failed to create listing: ' + (e.response?.data?.message || e.message))
   } finally {
     loading.value = false
   }
