@@ -1,10 +1,25 @@
 <script setup>
-import AuthPage from './AuthPage.vue'
+import { ref } from 'vue'
+import HomePage from './HomePage.vue'
+import PostItemPage from './PostItemPage.vue'
+
+const currentPage = ref('home')
+
+const handleNavigation = (page) => {
+  currentPage.value = page
+}
 </script>
 
 <template>
   <div id="app">
-    <AuthPage />
+    <HomePage
+      v-if="currentPage === 'home'"
+      @navigate="handleNavigation"
+    />
+    <PostItemPage
+      v-if="currentPage === 'post-item'"
+      @navigate="handleNavigation"
+    />
   </div>
 </template>
 
