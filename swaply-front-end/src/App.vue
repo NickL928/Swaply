@@ -3,6 +3,7 @@ import { ref, onMounted } from 'vue'
 import HomePage from './HomePage.vue'
 import PostItemPage from './PostItemPage.vue'
 import AuthPage from './AuthPage.vue'
+import ProfilePage from './ProfilePage.vue'
 
 // track current internal page AFTER authentication
 const currentPage = ref('home')
@@ -55,6 +56,13 @@ const handleLogout = () => {
       <PostItemPage
         v-if="currentPage === 'post-item'"
         @navigate="handleNavigation"
+      />
+      <ProfilePage
+        v-if="currentPage === 'profile'"
+        :user="currentUser"
+        @navigate="handleNavigation"
+        @logout="handleLogout"
+        @user-updated="u => currentUser = u"
       />
     </template>
   </div>

@@ -33,5 +33,8 @@ export default {
     return axios.post(BASE_URL + '/api/files/upload', formData, {
       headers: { ...authHeader(), 'Accept': 'application/json' }
     });
+  },
+  getListingsByUser(userId) {
+    return client.get(`/user/${userId}`);
   }
 };

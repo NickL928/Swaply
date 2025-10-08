@@ -25,7 +25,14 @@
             DM
           </button>
           <div class="profile-section">
-            <img alt="Profile" class="profile-picture" src="./assets/logo.svg" width="40" height="40" />
+            <img
+              alt="Profile"
+              class="profile-picture"
+              src="./assets/logo.svg"
+              width="40"
+              height="40"
+              @click="goProfile"
+            />
           </div>
           <button class="logout-button" @click="logout">Logout</button>
         </div>
@@ -218,6 +225,8 @@ const selectItem = (item) => {
 }
 
 const logout = () => emit('logout')
+
+const goProfile = () => emit('navigate', 'profile')
 
 const formatPrice = (price) => {
   if (price == null) return '$—'
