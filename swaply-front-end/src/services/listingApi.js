@@ -24,6 +24,9 @@ export default {
   getActiveListings() {
     return client.get('/active');
   },
+  getListing(id) {
+    return client.get('/' + id);
+  },
   createListing(userId, payload) {
     return client.post(`/user/${userId}`, payload, { headers: { 'Content-Type': 'application/json', ...authHeader() } });
   },

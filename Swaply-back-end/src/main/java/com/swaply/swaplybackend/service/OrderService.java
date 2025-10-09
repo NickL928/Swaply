@@ -7,10 +7,14 @@ import com.swaply.swaplybackend.entity.Listing;
 import com.swaply.swaplybackend.entity.Order;
 import com.swaply.swaplybackend.entity.User;
 import com.swaply.swaplybackend.enums.OrderStatus;
+import com.swaply.swaplybackend.enums.ListingStatus;
 import com.swaply.swaplybackend.exception.InvaldOrderException;
 import com.swaply.swaplybackend.repository.ListingRepository;
 import com.swaply.swaplybackend.repository.OrderRepository;
 import com.swaply.swaplybackend.repository.UserRepository;
+import com.swaply.swaplybackend.entity.CartItem;
+import com.swaply.swaplybackend.repository.CartItemRepository;
+import com.swaply.swaplybackend.dto.CheckoutResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -30,6 +34,9 @@ public class OrderService implements IOrderService {
     @Autowired
     private ListingRepository listingRepository;
 
+    @Autowired
+    private CartItemRepository cartItemRepository;
+
     @Override
     public OrderDto createOrder(CreateOrderDto createOrderDto) {
 
@@ -42,8 +49,8 @@ public class OrderService implements IOrderService {
                 .orElseThrow(() -> new InvaldOrderException("Listing not found"));
 
         //Check if buyer is not the seller and listing is available
-        if (!listing.getStatus().equals("AVAILABLE")) {
-            throw new InvaldOrderException("Listing is not available");
+        if (listing.getStatus() != ListingStatus.ACTIVE) {
+            throw new InvaldOrderException("Listing is not active");
         }
 
         if (listing.getUser().getUserId().equals(createOrderDto.getBuyerId())) {
@@ -55,6 +62,7 @@ public class OrderService implements IOrderService {
         order.setBuyer(buyer);
         order.setListing(listing);
         order.setTotalAmount(listing.getPrice());
+        order.setQuantity(1); // explicit default
         order.setNotes(createOrderDto.getNotes());
         order.setStatus(OrderStatus.PENDING);
         order.setCreatedAt(LocalDateTime.now());
@@ -109,13 +117,56 @@ public class OrderService implements IOrderService {
         orderRepository.deleteById(orderId);
     }
 
+    public CheckoutResponse createOrdersFromCart(User buyer) {
+        var cartItems = cartItemRepository.findByUser(buyer);
+        if (cartItems.isEmpty()) {
+            throw new InvaldOrderException("Cart is empty");
+        }
+        java.util.List<Long> orderIds = new java.util.ArrayList<>();
+        java.math.BigDecimal grandTotal = java.math.BigDecimal.ZERO;
+        int totalLineItems = 0;
+        for (CartItem ci : cartItems) {
+            Listing listing = ci.getListing();
+            if (listing.getStatus() != ListingStatus.ACTIVE) {
+                continue; // skip inactive listings
+            }
+            Order order = new Order();
+            order.setBuyer(buyer);
+            order.setListing(listing);
+            order.setQuantity(ci.getQuantity());
+            java.math.BigDecimal lineTotal = listing.getPrice().multiply(java.math.BigDecimal.valueOf(ci.getQuantity()));
+            order.setTotalAmount(lineTotal);
+            order.setNotes("Cart checkout qty=" + ci.getQuantity());
+            order.setStatus(OrderStatus.PENDING);
+            order.setCreatedAt(java.time.LocalDateTime.now());
+            order.setUpdatedAt(java.time.LocalDateTime.now());
+            Order saved = orderRepository.save(order);
+            orderIds.add(saved.getOrderId());
+            grandTotal = grandTotal.add(lineTotal);
+            totalLineItems += ci.getQuantity();
+        }
+        cartItemRepository.deleteByUser(buyer);
+        if (orderIds.isEmpty()) {
+            throw new InvaldOrderException("No active listings in cart to checkout");
+        }
+        CheckoutResponse response = new CheckoutResponse();
+        response.setOrderIds(orderIds);
+        response.setOrdersCreated(orderIds.size());
+        response.setGrandTotal(grandTotal);
+        response.setItemsCount(totalLineItems);
+        return response;
+    }
+
     private OrderDto convertToDto(Order order) {
         OrderDto dto = new OrderDto();
         dto.setOrderId(order.getOrderId());
         dto.setBuyerId(order.getBuyer().getUserId());
         dto.setBuyerName(order.getBuyer().getUserName());
-        dto.setSellerId(order.getSeller().getUserId());  // 使用getSeller()方法
-        dto.setSellerName(order.getSeller().getUserName());
+        var seller = order.getSeller();
+        if (seller != null) {
+            dto.setSellerId(seller.getUserId());
+            dto.setSellerName(seller.getUserName());
+        }
         dto.setListingId(order.getListing().getListingId());
         dto.setListingTitle(order.getListing().getTitle());
         dto.setTotalAmount(order.getTotalAmount());
@@ -123,6 +174,7 @@ public class OrderService implements IOrderService {
         dto.setCreatedAt(order.getCreatedAt());
         dto.setUpdatedAt(order.getUpdatedAt());
         dto.setNotes(order.getNotes());
+        dto.setQuantity(order.getQuantity());
         return dto;
     }
 }

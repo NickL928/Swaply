@@ -18,6 +18,7 @@ public class OrderDto {
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private String notes;
+    private int quantity;
 
     public OrderDto() {}
 
@@ -117,5 +118,13 @@ public class OrderDto {
 
     public void setNotes(String notes) {
         this.notes = notes;
+    }
+
+    public int getQuantity() {
+        return quantity;
+    }
+
+    public void setQuantity(int quantity) {
+        this.quantity = quantity;
     }
 }

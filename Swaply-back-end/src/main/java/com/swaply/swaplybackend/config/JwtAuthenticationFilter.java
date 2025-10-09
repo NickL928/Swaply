@@ -2,6 +2,8 @@ package com.swaply.swaplybackend.config;
 
 import com.swaply.swaplybackend.Util.JwtUtil;
 import com.swaply.swaplybackend.service.IUserService;
+import io.jsonwebtoken.ExpiredJwtException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -37,31 +39,37 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         String username = null;
         String jwt = null;
 
-        // Extract JWT from Authorization header
         if (authorizationHeader != null && authorizationHeader.startsWith("Bearer ")) {
             jwt = authorizationHeader.substring(7);
             try {
                 username = jwtUtil.extractUsername(jwt);
+            } catch (ExpiredJwtException eje) {
+                // Token expired: respond immediately
+                response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                response.setHeader("X-Auth-Error", "TOKEN_EXPIRED");
+                response.setContentType("application/json");
+                var body = java.util.Map.of(
+                        "error", "TOKEN_EXPIRED",
+                        "message", "JWT expired",
+                        "path", request.getRequestURI()
+                );
+                new ObjectMapper().writeValue(response.getOutputStream(), body);
+                return;
             } catch (Exception e) {
                 logger.error("Error extracting username from JWT: " + e.getMessage());
             }
         }
 
-        // Validate token and set authentication
         if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-
             var userOptional = userService.getUserByUserName(username);
-
             if (userOptional.isPresent() && jwtUtil.validateToken(jwt, username)) {
                 var user = userOptional.get();
                 String role = jwtUtil.extractRole(jwt);
-
                 UserDetails userDetails = User.builder()
                         .username(user.getUserName())
                         .password(user.getPassword())
                         .authorities(Collections.singletonList(new SimpleGrantedAuthority(role)))
                         .build();
-
                 UsernamePasswordAuthenticationToken authenticationToken =
                         new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
                 authenticationToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
