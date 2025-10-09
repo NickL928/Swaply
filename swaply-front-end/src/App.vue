@@ -4,6 +4,7 @@ import HomePage from './HomePage.vue'
 import PostItemPage from './PostItemPage.vue'
 import AuthPage from './AuthPage.vue'
 import ProfilePage from './ProfilePage.vue'
+import CommunityPage from './CommunityPage.vue'
 
 // track current internal page AFTER authentication
 const currentPage = ref('home')
@@ -52,6 +53,10 @@ const handleLogout = () => {
         v-if="currentPage === 'home'"
         @navigate="handleNavigation"
         @logout="handleLogout"
+      />
+      <CommunityPage
+        v-if="currentPage === 'community'"
+        @navigate="handleNavigation"
       />
       <PostItemPage
         v-if="currentPage === 'post-item'"
