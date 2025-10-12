@@ -4,6 +4,8 @@ import HomePage from './HomePage.vue'
 import PostItemPage from './PostItemPage.vue'
 import AuthPage from './AuthPage.vue'
 import ProfilePage from './ProfilePage.vue'
+import ListingDetail from './ListingDetail.vue'
+import CartPage from './CartPage.vue'
 
 // track current internal page AFTER authentication
 const currentPage = ref('home')
@@ -11,6 +13,8 @@ const currentPage = ref('home')
 const isAuthenticated = ref(false)
 // store user info
 const currentUser = ref(null)
+// selected listing id for detail page
+const selectedListingId = ref(null)
 
 onMounted(() => {
   const token = localStorage.getItem('token')
@@ -22,7 +26,10 @@ onMounted(() => {
   }
 })
 
-const handleNavigation = (page) => {
+const handleNavigation = (page, payload) => {
+  if (page === 'listing-detail') {
+    selectedListingId.value = payload?.listingId ?? null
+  }
   currentPage.value = page
 }
 
@@ -54,15 +61,24 @@ const handleLogout = () => {
         @logout="handleLogout"
       />
       <PostItemPage
-        v-if="currentPage === 'post-item'"
+        v-else-if="currentPage === 'post-item'"
         @navigate="handleNavigation"
       />
       <ProfilePage
-        v-if="currentPage === 'profile'"
+        v-else-if="currentPage === 'profile'"
         :user="currentUser"
         @navigate="handleNavigation"
         @logout="handleLogout"
         @user-updated="u => currentUser = u"
+      />
+      <ListingDetail
+        v-else-if="currentPage === 'listing-detail' && selectedListingId != null"
+        :listingId="selectedListingId"
+        @navigate="handleNavigation"
+      />
+      <CartPage
+        v-else-if="currentPage === 'cart'"
+        @navigate="handleNavigation"
       />
     </template>
   </div>

@@ -1,7 +1,8 @@
 import axios from 'axios';
 
-const BASE_URL = 'http://localhost:8080';
-const LISTING_BASE = BASE_URL + '/api/listings';
+// Use Vite dev proxy: all API calls go through /api on the same origin
+const API_BASE = '/api';
+const LISTING_BASE = API_BASE + '/listings';
 
 const client = axios.create({
   baseURL: LISTING_BASE
@@ -20,7 +21,7 @@ function authHeader() {
 }
 
 export default {
-  BASE_URL,
+  API_BASE,
   getActiveListings() {
     return client.get('/active');
   },
@@ -33,8 +34,9 @@ export default {
   uploadImage(file) {
     const formData = new FormData();
     formData.append('file', file);
-    return axios.post(BASE_URL + '/api/files/upload', formData, {
-      headers: { ...authHeader(), 'Accept': 'application/json' }
+    // Post to same-origin /api; Vite proxies to backend to avoid CORS
+    return axios.post(API_BASE + '/files/upload', formData, {
+      headers: { ...authHeader() }
     });
   },
   getListingsByUser(userId) {

@@ -203,14 +203,15 @@ const handleFileUpload = async (event) => {
     if (file && file.type.startsWith('image/')) {
       try {
         const { data } = await listingApi.uploadImage(file)
+        const url = typeof data.url === 'string' ? (data.url.startsWith('http') ? data.url : (data.url.startsWith('/') ? data.url : '/' + data.url)) : ''
         uploadedImages.value.push({
-          fileName: data.fileName,
-          url: data.url, // relative server path /uploads/...
-          preview: listingApi.BASE_URL + data.url
+          fileName: data.fileName || file.name,
+          url: url, // normalized server path '/uploads/...'
+          preview: url // use proxied relative URL for preview to avoid CORS
         })
       } catch (e) {
         console.error('Upload failed for', file.name, e)
-        alert('Failed to upload ' + file.name)
+        alert('Failed to upload ' + file.name + ': ' + (e.response?.data?.message || e.message))
       }
     }
   }

@@ -1,9 +1,6 @@
 import axios from 'axios';
 
-const BASE_URL = 'http://localhost:8080';
-const USER_BASE = BASE_URL + '/api/user';
-
-const client = axios.create({ baseURL: USER_BASE });
+const client = axios.create({ baseURL: '/api/user' });
 
 client.interceptors.request.use(config => {
   const token = localStorage.getItem('token');
@@ -22,4 +19,3 @@ export default {
   getByUsername(username) { return client.get(`/username/${encodeURIComponent(username)}`); },
   getByEmail(email) { return client.get(`/email/${encodeURIComponent(email)}`); }
 };
-

@@ -1,8 +1,8 @@
 import axios from 'axios';
 
-// Base configuration for auth endpoints
+// Base configuration for auth endpoints via Vite proxy
 const authClient = axios.create({
-  baseURL: 'http://localhost:8080/api/auth',
+  baseURL: '/api/auth',
   headers: {
     'Content-Type': 'application/json'
   }
@@ -27,4 +27,3 @@ export default {
     return authClient.post('/register', payload);
   }
 };
-

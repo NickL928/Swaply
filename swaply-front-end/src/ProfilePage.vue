@@ -217,12 +217,13 @@ function editListing(listing) {
 }
 
 async function deleteListing(listing) {
-  // You don't currently have an endpoint using this pattern for deletion from profile (needs userId)
   // Could call DELETE /api/listings/{listingId}/user/{userId}
   if (!confirm('Delete this listing?')) return
   try {
-    // Using raw fetch to avoid adding method in listingApi for brevity
-    await fetch(`${listingApi.BASE_URL}/api/listings/${listing.listingId}/user/${props.user.userId}`, { method: 'DELETE', headers: { Authorization: 'Bearer ' + localStorage.getItem('token') } })
+    await fetch(`/api/listings/${listing.listingId}/user/${props.user.userId}`, {
+      method: 'DELETE',
+      headers: { Authorization: 'Bearer ' + localStorage.getItem('token') }
+    })
     userListings.value = userListings.value.filter(l => l.listingId !== listing.listingId)
   } catch (e) {
     alert('Failed to delete')
@@ -249,7 +250,8 @@ function formatPrice(price) {
 function resolveImage(path) {
   if (!path) return './assets/logo.svg'
   if (path.startsWith('http://') || path.startsWith('https://')) return path
-  if (path.startsWith('/uploads/')) return listingApi.BASE_URL + path
+  if (path.startsWith('/uploads/')) return path
+  if (path.startsWith('uploads/')) return '/' + path
   return path
 }
 
@@ -335,4 +337,3 @@ avatar-wrapper { position:relative; }
 .fade-enter-active, .fade-leave-active { transition: opacity .25s; }
 .fade-enter-from, .fade-leave-to { opacity:0; }
 </style>
-

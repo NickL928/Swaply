@@ -136,7 +136,7 @@ const openListing = (id) => emit('navigate','listing-detail',{ listingId: id })
 const resolveImage = (p) => {
   if (!p) return './assets/logo.svg'
   if (p.startsWith('http')) return p
-  if (p.startsWith('/uploads/')) return cartApi.BASE_URL + p
+  if (p.startsWith('/uploads/')) return p
   return p
 }
 </script>

@@ -24,6 +24,10 @@
             <span class="dm-icon">💬</span>
             DM
           </button>
+          <button class="cart-button" @click="goCart" aria-label="Cart">
+            <span class="cart-icon">🛒</span>
+            <span v-if="cartCount > 0" class="cart-badge">{{ cartCount }}</span>
+          </button>
           <div class="profile-section">
             <img
               alt="Profile"
@@ -132,8 +136,9 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import listingApi from './services/listingApi.js'
+import cartApi from './services/cartApi.js'
 
 const emit = defineEmits(['navigate','logout'])
 
@@ -149,6 +154,16 @@ const categoryIndex = ref(0)
 
 const placeholderImage = './assets/logo.svg'
 
+const cartCount = ref(0)
+async function refreshCartCount() {
+  try {
+    const { data } = await cartApi.getCart()
+    cartCount.value = (data || []).reduce((sum, it) => sum + (it.quantity || 0), 0)
+  } catch { /* silent */ }
+}
+
+const handleCartUpdated = () => refreshCartCount()
+
 const fetchListings = async () => {
   loading.value = true
   errorMessage.value = ''
@@ -163,7 +178,15 @@ const fetchListings = async () => {
   }
 }
 
-onMounted(fetchListings)
+onMounted(() => {
+  fetchListings()
+  refreshCartCount()
+  window.addEventListener('cart-updated', handleCartUpdated)
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('cart-updated', handleCartUpdated)
+})
 
 const categoryFilter = computed(() => activeFilter.value === 'category' ? categoryCycle[categoryIndex.value] : null)
 const categoryFilterLabel = computed(() => {
@@ -221,12 +244,13 @@ const changePage = (page) => {
 }
 
 const selectItem = (item) => {
-  console.log('Selected item:', item.listingId)
+  emit('navigate', 'listing-detail', { listingId: item.listingId })
 }
 
 const logout = () => emit('logout')
 
 const goProfile = () => emit('navigate', 'profile')
+const goCart = () => emit('navigate', 'cart')
 
 const formatPrice = (price) => {
   if (price == null) return '$—'
@@ -247,7 +271,8 @@ const prettyEnum = (val) => {
 const resolveImage = (path) => {
   if (!path) return placeholderImage
   if (path.startsWith('http://') || path.startsWith('https://')) return path
-  if (path.startsWith('/uploads/')) return listingApi.BASE_URL + path
+  if (path.startsWith('/uploads/')) return path // served via Vite proxy in dev
+  if (path.startsWith('uploads/')) return '/' + path
   return path
 }
 </script>
@@ -360,6 +385,45 @@ const resolveImage = (path) => {
 
 .dm-icon {
   font-size: 1.1rem;
+}
+
+.cart-button {
+  position: relative;
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  padding: 0.6rem 0.8rem;
+  border-radius: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.3s;
+  backdrop-filter: blur(10px);
+}
+
+.cart-button:hover {
+  background: rgba(255, 255, 255, 0.3);
+  border-color: rgba(255, 255, 255, 0.5);
+  transform: translateY(-2px);
+}
+
+.cart-icon {
+  font-size: 1.1rem;
+}
+
+.cart-badge {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  background: #ef4444;
+  color: white;
+  border-radius: 999px;
+  padding: 0 6px;
+  min-width: 20px;
+  height: 20px;
+  line-height: 20px;
+  font-size: 12px;
+  font-weight: 800;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, .2);
 }
 
 .profile-section {
