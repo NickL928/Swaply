@@ -12,7 +12,7 @@
         <!-- Navigation -->
         <nav class="nav-menu">
           <a href="#" class="nav-link active">Home</a>
-          <a href="#" class="nav-link">Community</a>
+          <a href="#" class="nav-link" @click.prevent="goCommunity">Community</a>
           <a href="#" class="nav-link">Buy Requests</a>
           <a href="#" class="nav-link">System Announcements</a>
           <a href="#" class="nav-link">Message & Feedback</a>
@@ -45,91 +45,93 @@
 
     <!-- Main Content -->
     <main class="main-content">
-      <!-- Search Section -->
-      <div class="search-section">
-        <div class="search-container">
-          <div class="search-input-wrapper">
-            <span class="search-icon">🔍</span>
-            <input
-              type="text"
-              placeholder="Search for items..."
-              class="search-input"
-              v-model="searchQuery"
-            />
-          </div>
-        </div>
-      </div>
-
-      <div class="status-bar" v-if="loading || errorMessage">
-        <span v-if="loading">Loading listings...</span>
-        <span v-else class="error-text">{{ errorMessage }}</span>
-      </div>
-
-      <!-- Filter Buttons -->
-      <div class="filter-section">
-        <button
-          class="filter-button"
-          :class="{ active: activeFilter === 'all' }"
-          @click="setFilter('all')"
-        >
-          All Active
-        </button>
-        <button
-          class="filter-button"
-          :class="{ active: activeFilter === 'sell' }"
-          @click="setFilter('sell')"
-        >
-          Sell an Item
-        </button>
-        <button
-          class="filter-button"
-          :class="{ active: activeFilter === 'category' }"
-          @click="cycleCategory()"
-        >
-          {{ categoryFilterLabel }}
-        </button>
-      </div>
-
-      <!-- Items Grid -->
-      <div class="items-grid">
-        <div
-          v-for="item in pagedItems"
-          :key="item.listingId"
-          class="item-card"
-          @click="selectItem(item)"
-        >
-          <div class="item-image">
-            <img :src="resolveImage(item.imageUrl)" :alt="item.title" />
-          </div>
-          <div class="item-content">
-            <h3 class="item-title">{{ item.title }}</h3>
-            <p class="item-price">{{ formatPrice(item.price) }}</p>
-            <p class="item-description ellipsis">{{ item.description }}</p>
-            <div class="meta-row">
-              <span class="badge category">{{ prettyEnum(item.category) }}</span>
-              <span class="badge condition">{{ prettyEnum(item.condition) }}</span>
+      <div class="content-wrap">
+        <!-- Search Section -->
+        <div class="search-section">
+          <div class="search-container">
+            <div class="search-input-wrapper">
+              <span class="search-icon">🔍</span>
+              <input
+                type="text"
+                placeholder="Search for items..."
+                class="search-input"
+                v-model="searchQuery"
+              />
             </div>
           </div>
         </div>
-      </div>
 
-      <!-- Pagination -->
-      <div class="pagination" v-if="!loading && pagedItems.length">
-        <button
-          class="pagination-button"
-          :disabled="currentPage === 1"
-          @click="changePage(currentPage - 1)"
-        >
-          Previous
-        </button>
-        <span class="page-info">Page {{ currentPage }} of {{ totalPages }}</span>
-        <button
-          class="pagination-button"
-          :disabled="currentPage === totalPages"
-          @click="changePage(currentPage + 1)"
-        >
-          Next
-        </button>
+        <div class="status-bar" v-if="loading || errorMessage">
+          <span v-if="loading">Loading listings...</span>
+          <span v-else class="error-text">{{ errorMessage }}</span>
+        </div>
+
+        <!-- Filter Buttons -->
+        <div class="filter-section">
+          <button
+            class="filter-button"
+            :class="{ active: activeFilter === 'all' }"
+            @click="setFilter('all')"
+          >
+            All Active
+          </button>
+          <button
+            class="filter-button"
+            :class="{ active: activeFilter === 'sell' }"
+            @click="setFilter('sell')"
+          >
+            Sell an Item
+          </button>
+          <button
+            class="filter-button"
+            :class="{ active: activeFilter === 'category' }"
+            @click="cycleCategory()"
+          >
+            {{ categoryFilterLabel }}
+          </button>
+        </div>
+
+        <!-- Items Grid -->
+        <div class="items-grid">
+          <div
+            v-for="item in pagedItems"
+            :key="item.listingId"
+            class="item-card"
+            @click="selectItem(item)"
+          >
+            <div class="item-image">
+              <img :src="resolveImage(item.imageUrl)" :alt="item.title" />
+            </div>
+            <div class="item-content">
+              <h3 class="item-title">{{ item.title }}</h3>
+              <p class="item-price">{{ formatPrice(item.price) }}</p>
+              <p class="item-description ellipsis">{{ item.description }}</p>
+              <div class="meta-row">
+                <span class="badge category">{{ prettyEnum(item.category) }}</span>
+                <span class="badge condition">{{ prettyEnum(item.condition) }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Pagination -->
+        <div class="pagination" v-if="!loading && pagedItems.length">
+          <button
+            class="pagination-button"
+            :disabled="currentPage === 1"
+            @click="changePage(currentPage - 1)"
+          >
+            Previous
+          </button>
+          <span class="page-info">Page {{ currentPage }} of {{ totalPages }}</span>
+          <button
+            class="pagination-button"
+            :disabled="currentPage === totalPages"
+            @click="changePage(currentPage + 1)"
+          >
+            Next
+          </button>
+        </div>
       </div>
     </main>
   </div>
@@ -251,6 +253,7 @@ const logout = () => emit('logout')
 
 const goProfile = () => emit('navigate', 'profile')
 const goCart = () => emit('navigate', 'cart')
+const goCommunity = () => emit('navigate', 'community')
 
 const formatPrice = (price) => {
   if (price == null) return '$—'
@@ -261,7 +264,7 @@ const formatPrice = (price) => {
 
 const prettyEnum = (val) => {
   if (!val) return ''
-  return val
+  return String(val)
     .toLowerCase()
     .split('_')
     .map(w => w.charAt(0).toUpperCase() + w.slice(1))
@@ -269,9 +272,10 @@ const prettyEnum = (val) => {
 }
 
 const resolveImage = (path) => {
+  const placeholderImage = './assets/logo.svg'
   if (!path) return placeholderImage
   if (path.startsWith('http://') || path.startsWith('https://')) return path
-  if (path.startsWith('/uploads/')) return path // served via Vite proxy in dev
+  if (path.startsWith('/uploads/')) return path
   if (path.startsWith('uploads/')) return '/' + path
   return path
 }
@@ -406,383 +410,237 @@ const resolveImage = (path) => {
   transform: translateY(-2px);
 }
 
-.cart-icon {
-  font-size: 1.1rem;
-}
-
 .cart-badge {
   position: absolute;
   top: -6px;
   right: -6px;
   background: #ef4444;
   color: white;
-  border-radius: 999px;
+  border-radius: 9999px;
   padding: 0 6px;
-  min-width: 20px;
-  height: 20px;
-  line-height: 20px;
   font-size: 12px;
-  font-weight: 800;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, .2);
 }
 
 .profile-section {
-  position: relative;
-}
-
-.profile-picture {
-  width: 45px;
-  height: 45px;
-  border-radius: 50%;
-  cursor: pointer;
-  border: 3px solid rgba(255, 255, 255, 0.3);
-  transition: all 0.3s;
-  filter: brightness(0) invert(1);
-  background: rgba(255, 255, 255, 0.1);
-  padding: 5px;
-}
-
-.profile-picture:hover {
-  border-color: rgba(255, 255, 255, 0.6);
-  transform: scale(1.05);
-}
-
-.logout-button {
-  background: #ef4444;
-  color: #fff;
-  border: none;
-  padding: 0.65rem 1rem;
-  border-radius: 10px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background .25s, transform .25s;
-}
-
-.logout-button:hover {
-  background: #dc2626;
-  transform: translateY(-2px);
-}
-
-.logout-button:active {
-  transform: translateY(0);
-}
-
-/* Main Content */
-.main-content {
-  width: 100%;
-  max-width: none;
-  margin: 0;
-  padding: 2.5rem 2rem;
-  box-sizing: border-box;
-}
-
-/* Search Section */
-.search-section {
-  margin-bottom: 2.5rem;
-}
-
-.search-container {
-  max-width: 700px;
-  margin: 0 auto;
-}
-
-.search-input-wrapper {
-  position: relative;
   display: flex;
   align-items: center;
 }
 
+.profile-picture {
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.5);
+  cursor: pointer;
+}
+
+.logout-button {
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  padding: 0.6rem 0.8rem;
+  border-radius: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.3s;
+  backdrop-filter: blur(10px);
+}
+
+.logout-button:hover {
+  background: rgba(255, 255, 255, 0.3);
+  border-color: rgba(255, 255, 255, 0.5);
+  transform: translateY(-2px);
+}
+
+/* Main Content */
+.main-content {
+  padding: 1.5rem 2rem;
+}
+
+.content-wrap {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.search-section {
+  margin-bottom: 1rem;
+}
+
+.search-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.search-input-wrapper {
+  position: relative;
+  width: 100%;
+  max-width: 600px;
+}
+
 .search-icon {
   position: absolute;
-  left: 1.5rem;
-  color: #6b7280;
-  font-size: 1.3rem;
-  z-index: 1;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #64748b;
 }
 
 .search-input {
   width: 100%;
-  padding: 1.5rem 1.5rem 1.5rem 3.5rem;
-  border: 3px solid #e5e7eb;
-  border-radius: 20px;
-  font-size: 1.2rem;
-  background: white;
-  transition: all 0.3s;
-  box-sizing: border-box;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  padding: 0.75rem 1rem 0.75rem 2.25rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 12px;
+  font-size: 1rem;
+  outline: none;
+  transition: border 0.2s ease;
 }
 
 .search-input:focus {
-  outline: none;
-  border-color: #4f46e5;
-  box-shadow: 0 0 0 5px rgba(79, 70, 229, 0.1), 0 8px 20px rgba(0, 0, 0, 0.1);
+  border-color: #818cf8;
+  box-shadow: 0 0 0 4px rgba(129, 140, 248, 0.15);
 }
 
-/* Filter Section */
+.status-bar {
+  margin: 1rem 0;
+  color: #334155;
+}
+
+.error-text {
+  color: #dc2626;
+}
+
+/* Filters */
 .filter-section {
   display: flex;
-  gap: 1.25rem;
-  margin-bottom: 2.5rem;
+  gap: 0.5rem;
+  margin: 1rem 0 1.25rem 0;
   flex-wrap: wrap;
   justify-content: center;
 }
 
 .filter-button {
-  padding: 1rem 2rem;
-  border: 2px solid #e5e7eb;
+  padding: 0.5rem 1rem;
+  border-radius: 10px;
+  border: 1px solid #cbd5e1;
   background: white;
-  border-radius: 15px;
-  font-weight: 700;
+  color: #334155;
   cursor: pointer;
-  transition: all 0.3s;
-  color: #6b7280;
-  font-size: 1rem;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  transition: all 0.2s ease;
 }
 
-.filter-button:hover,
+.filter-button:hover {
+  background: #f8fafc;
+}
+
 .filter-button.active {
-  border-color: #4f46e5;
-  color: white;
-  background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
-  transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(79, 70, 229, 0.3);
+  background: #eef2ff;
+  border-color: #818cf8;
+  color: #312e81;
 }
 
 /* Items Grid */
 .items-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
-  gap: 2.5rem;
-  margin-bottom: 3rem;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 320px));
+  gap: 1rem;
+  justify-content: center;
 }
 
 .item-card {
   background: white;
-  border-radius: 20px;
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
   overflow: hidden;
   cursor: pointer;
-  transition: all 0.4s;
-  border: 1px solid #f1f5f9;
+  transition: transform 0.15s ease, box-shadow 0.2s ease;
+  width: 100%;
+  max-width: 320px;
 }
 
 .item-card:hover {
-  transform: translateY(-8px);
-  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.15);
-  border-color: #4f46e5;
-}
-
-.item-image {
-  width: 100%;
-  height: 220px;
-  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  overflow: hidden;
-  position: relative;
-}
-
-.item-image::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: linear-gradient(45deg, transparent 49%, rgba(79, 70, 229, 0.05) 50%, transparent 51%);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.08);
 }
 
 .item-image img {
-  width: 100px;
-  height: 100px;
+  width: 100%;
+  height: 180px;
   object-fit: cover;
-  opacity: 0.4;
-  z-index: 1;
-  position: relative;
+  background: #f1f5f9;
 }
 
 .item-content {
-  padding: 2rem;
+  padding: 0.75rem 1rem;
 }
 
 .item-title {
-  font-size: 1.4rem;
   font-weight: 700;
-  color: #1f2937;
-  margin-bottom: 0.75rem;
-  line-height: 1.3;
+  margin: 0 0 0.25rem 0;
+  color: #0f172a;
 }
 
 .item-price {
-  font-size: 1.75rem;
-  font-weight: 800;
-  background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
-  background-clip: text;
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  margin-bottom: 1rem;
+  color: #16a34a;
+  font-weight: 700;
+  margin: 0 0 0.5rem 0;
 }
 
 .item-description {
-  color: #6b7280;
-  font-size: 1rem;
-  line-height: 1.6;
+  color: #475569;
+  font-size: 0.9rem;
+  margin: 0 0 0.5rem 0;
+}
+
+.ellipsis {
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.meta-row {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.badge {
+  background: #f1f5f9;
+  color: #334155;
+  padding: 0.25rem 0.5rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 600;
 }
 
 /* Pagination */
 .pagination {
   display: flex;
-  justify-content: center;
+  gap: 1rem;
   align-items: center;
-  gap: 2.5rem;
-  margin-top: 3rem;
-}
-
-.pagination-button {
-  padding: 1rem 2rem;
-  border: 2px solid #e5e7eb;
-  background: white;
-  border-radius: 15px;
-  font-weight: 700;
-  cursor: pointer;
-  transition: all 0.3s;
-  color: #6b7280;
-  font-size: 1rem;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-}
-
-.pagination-button:hover:not(:disabled) {
-  border-color: #4f46e5;
-  color: white;
-  background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
-  transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(79, 70, 229, 0.3);
-}
-
-.pagination-button:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-  transform: none;
+  justify-content: center;
+  margin: 1.25rem 0 0.5rem 0;
 }
 
 .page-info {
-  font-weight: 700;
-  color: #374151;
-  font-size: 1.1rem;
-  padding: 1rem 1.5rem;
+  color: #334155;
+}
+
+.pagination-button {
+  padding: 0.5rem 1rem;
+  border-radius: 10px;
+  border: 1px solid #cbd5e1;
   background: white;
-  border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  color: #334155;
+  cursor: pointer;
+  transition: all 0.2s ease;
 }
 
-/* Mobile Responsiveness */
-@media (max-width: 1200px) {
-  .header-content {
-    padding: 1rem 1.5rem;
-  }
-
-  .main-content {
-    padding: 2rem 1.5rem;
-  }
-
-  .items-grid {
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-    gap: 2rem;
-  }
+.pagination-button:hover:not(:disabled) {
+  background: #f8fafc;
 }
 
-@media (max-width: 1024px) {
-  .nav-menu {
-    display: none;
-  }
-
-  .header-content {
-    justify-content: space-between;
-  }
-
-  .items-grid {
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-    gap: 1.5rem;
-  }
+.pagination-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
-
-@media (max-width: 768px) {
-  .header-content {
-    flex-wrap: wrap;
-    gap: 1rem;
-    padding: 1rem;
-  }
-
-  .logo-text {
-    font-size: 1.5rem;
-  }
-
-  .filter-section {
-    justify-content: center;
-    gap: 1rem;
-  }
-
-  .filter-button {
-    padding: 0.75rem 1.5rem;
-    font-size: 0.9rem;
-  }
-
-  .items-grid {
-    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-    gap: 1.5rem;
-  }
-
-  .pagination {
-    flex-direction: column;
-    gap: 1rem;
-  }
-
-  .main-content {
-    padding: 1.5rem 1rem;
-  }
-}
-
-@media (max-width: 480px) {
-  .items-grid {
-    grid-template-columns: 1fr;
-    gap: 1rem;
-  }
-
-  .search-input {
-    padding: 1.25rem 1.25rem 1.25rem 3rem;
-    font-size: 1rem;
-    border-radius: 16px;
-  }
-
-  .search-icon {
-    left: 1.25rem;
-    font-size: 1.1rem;
-  }
-
-  .filter-button {
-    padding: 0.6rem 1.25rem;
-    font-size: 0.85rem;
-  }
-
-  .item-content {
-    padding: 1.5rem;
-  }
-
-  .item-title {
-    font-size: 1.2rem;
-  }
-
-  .item-price {
-    font-size: 1.5rem;
-  }
-}
-
-.status-bar { text-align:center; margin-bottom:1rem; font-weight:600; }
-.error-text { color:#b91c1c; }
-.meta-row { display:flex; gap:.5rem; margin-top:.75rem; flex-wrap:wrap; }
-.badge { background:#eef2ff; color:#4338ca; padding:.35rem .7rem; border-radius:12px; font-size:.7rem; font-weight:600; letter-spacing:.5px; text-transform:uppercase; }
-.badge.condition { background:#f1f5f9; color:#475569; }
-.ellipsis { display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
 </style>

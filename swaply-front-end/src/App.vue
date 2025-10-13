@@ -6,6 +6,7 @@ import AuthPage from './AuthPage.vue'
 import ProfilePage from './ProfilePage.vue'
 import ListingDetail from './ListingDetail.vue'
 import CartPage from './CartPage.vue'
+import CommunityPage from './CommunityPage.vue'
 
 // track current internal page AFTER authentication
 const currentPage = ref('home')
@@ -78,6 +79,10 @@ const handleLogout = () => {
       />
       <CartPage
         v-else-if="currentPage === 'cart'"
+        @navigate="handleNavigation"
+      />
+      <CommunityPage
+        v-else-if="currentPage === 'community'"
         @navigate="handleNavigation"
       />
     </template>

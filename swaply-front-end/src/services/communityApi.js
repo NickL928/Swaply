@@ -41,6 +41,8 @@ const mockThreads = [
   }
 ]
 
+let threadIdCounter = 100
+
 export default {
   async listThreads({ page = 1, size = 10, q, category, sort } = {}) {
     await delay(400)
@@ -60,6 +62,21 @@ export default {
     const start = (page - 1) * size
     const pageItems = items.slice(start, start + size)
     return { items: pageItems, page, size, total }
+  },
+  async postThread({ title, body, category }) {
+    await delay(300)
+    const newThread = {
+      id: 't' + (++threadIdCounter),
+      title,
+      body,
+      author: { id: 'u0', name: 'You' },
+      createdAt: new Date().toISOString(),
+      category,
+      images: [],
+      stats: { replies: 0, likes: 0, views: 0 },
+      likedByMe: false
+    }
+    mockThreads.unshift(newThread)
+    return newThread
   }
 }
-
