@@ -1,82 +1,52 @@
-// Simple mock API for community threads
-// Later you can replace with real HTTP calls using axios
+// Use real backend API for community threads via Vite proxy
+import axios from 'axios'
 
-function delay(ms) {
-  return new Promise(res => setTimeout(res, ms))
-}
+const API_BASE = '/api/threads'
 
-const mockThreads = [
-  {
-    id: 't1',
-    title: 'Welcome to Swaply Community 🎉',
-    body: 'Introduce yourself and share what you are looking to swap! ',
-    author: { id: 'u1', name: 'Admin' },
-    createdAt: new Date().toISOString(),
-    category: 'GENERAL',
-    images: [],
-    stats: { replies: 3, likes: 12, views: 120 },
-    likedByMe: false
-  },
-  {
-    id: 't2',
-    title: 'Best practices for safe trading',
-    body: 'Here are some tips to keep your trades safe and smooth...',
-    author: { id: 'u2', name: 'Sarah' },
-    createdAt: new Date(Date.now() - 86400000).toISOString(),
-    category: 'GUIDE',
-    images: [],
-    stats: { replies: 5, likes: 25, views: 240 },
-    likedByMe: true
-  },
-  {
-    id: 't3',
-    title: 'Looking for used textbooks',
-    body: 'If you have CS or Math textbooks, please DM me or reply!',
-    author: { id: 'u3', name: 'Leo' },
-    createdAt: new Date(Date.now() - 2*86400000).toISOString(),
-    category: 'REQUEST',
-    images: [],
-    stats: { replies: 2, likes: 4, views: 60 },
-    likedByMe: false
-  }
-]
-
-let threadIdCounter = 100
+const client = axios.create({ baseURL: API_BASE })
+client.interceptors.request.use(cfg => {
+  const token = localStorage.getItem('token')
+  if (token) cfg.headers.Authorization = `Bearer ${token}`
+  return cfg
+})
 
 export default {
-  async listThreads({ page = 1, size = 10, q, category, sort } = {}) {
-    await delay(400)
-    let items = [...mockThreads]
-    if (q) {
-      const s = q.toLowerCase()
-      items = items.filter(t => t.title.toLowerCase().includes(s) || t.body.toLowerCase().includes(s))
-    }
-    if (category) {
-      items = items.filter(t => t.category === category)
-    }
-    // naive sort: newest first
-    if (!sort || sort === 'newest') {
-      items.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
-    }
-    const total = items.length
-    const start = (page - 1) * size
-    const pageItems = items.slice(start, start + size)
-    return { items: pageItems, page, size, total }
+  async listThreads({ page = 1, size = 10, q, category } = {}) {
+    const params = { page, size }
+    if (q) params.q = q
+    if (category) params.category = category
+    const { data } = await client.get('', { params })
+    return data // { items, page, size, total }
   },
+
+  async getThread(id, { incrementView = true } = {}) {
+    const { data } = await client.get(`/${id}`, { params: { inc: incrementView } })
+    return data // ThreadDto
+  },
+
   async postThread({ title, body, category }) {
-    await delay(300)
-    const newThread = {
-      id: 't' + (++threadIdCounter),
-      title,
-      body,
-      author: { id: 'u0', name: 'You' },
-      createdAt: new Date().toISOString(),
-      category,
-      images: [],
-      stats: { replies: 0, likes: 0, views: 0 },
-      likedByMe: false
-    }
-    mockThreads.unshift(newThread)
-    return newThread
+    const { data } = await client.post('', { title, body, category })
+    return data // ThreadDto
+  },
+
+  async likeThread(id) {
+    const { data } = await client.post(`/${id}/like`)
+    return data
+  },
+
+  async unlikeThread(id) {
+    const { data } = await client.post(`/${id}/unlike`)
+    return data
+  },
+
+  // Replies
+  async listReplies(threadId, { page = 1, size = 20 } = {}) {
+    const { data } = await client.get(`/${threadId}/replies`, { params: { page, size } })
+    return data // { items, page, size, total }
+  },
+
+  async addReply(threadId, { body }) {
+    const { data } = await client.post(`/${threadId}/replies`, { body })
+    return data // ThreadReplyDto
   }
 }

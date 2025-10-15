@@ -2,6 +2,7 @@
 const props = defineProps({
   thread: { type: Object, required: true }
 })
+const emit = defineEmits(['open', 'like', 'unlike'])
 
 const formatDate = (iso) => {
   try {
@@ -15,10 +16,18 @@ const bodySnippet = (text, len = 140) => {
   if (!text) return ''
   return text.length > len ? text.slice(0, len) + '…' : text
 }
+
+function openCard() {
+  emit('open', props.thread.id)
+}
+function onLikeClick(e) {
+  e.stopPropagation()
+  emit('like', props.thread)
+}
 </script>
 
 <template>
-  <article class="thread-card">
+  <article class="thread-card" @click="openCard">
     <header class="thread-header">
       <h3 class="thread-title">{{ thread.title }}</h3>
       <div class="thread-meta">
@@ -31,8 +40,9 @@ const bodySnippet = (text, len = 140) => {
     <p class="thread-snippet">{{ bodySnippet(thread.body) }}</p>
     <footer class="thread-footer">
       <span class="stat">💬 {{ thread.stats?.replies ?? 0 }}</span>
+      <span class="stat">👁️ {{ thread.stats?.views ?? 0 }}</span>
       <span class="stat">❤️ {{ thread.stats?.likes ?? 0 }}</span>
-      <span v-if="thread.stats?.views != null" class="stat">👁️ {{ thread.stats.views }}</span>
+      <button class="like-btn" @click="onLikeClick" title="Like">Like</button>
     </footer>
   </article>
 </template>
@@ -44,6 +54,7 @@ const bodySnippet = (text, len = 140) => {
   padding: 1rem;
   background: #fff;
   transition: box-shadow .2s, transform .2s;
+  cursor: pointer;
 }
 .thread-card:hover {
   box-shadow: 0 6px 18px rgba(0,0,0,0.06);
@@ -72,10 +83,22 @@ const bodySnippet = (text, len = 140) => {
 .thread-footer {
   margin-top: .75rem;
   display: flex;
-  gap: 1rem;
+  gap: 0.5rem 1rem;
   color: #475569;
   font-size: .9rem;
+  align-items: center;
+  flex-wrap: wrap;
 }
 .stat { display: inline-flex; align-items: center; gap: .25rem; }
+.like-btn {
+  margin-left: auto;
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  color: #334155;
+  padding: .35rem .7rem;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.like-btn:hover { background: #e2e8f0; }
 </style>
-
