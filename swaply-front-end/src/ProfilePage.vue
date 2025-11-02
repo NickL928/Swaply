@@ -16,8 +16,11 @@
       <section class="profile-panel">
         <div class="card user-summary">
           <div class="avatar-wrapper">
-            <img :src="avatarUrl" class="avatar" alt="Avatar" />
-            <button class="change-avatar-btn" disabled>Change (todo)</button>
+            <img :src="avatarPreview || avatarUrl" class="avatar" alt="Avatar" />
+            <input ref="fileInput" type="file" accept="image/*" class="hidden-file" @change="onFileChosen" />
+            <button class="change-avatar-btn" :disabled="uploadingAvatar" @click="triggerFileSelect">
+              {{ uploadingAvatar ? 'Uploading...' : 'Change' }}
+            </button>
           </div>
           <div class="user-meta">
             <h2>{{ form.userName || 'User' }}</h2>
@@ -118,7 +121,10 @@ const saving = ref(false)
 const deleting = ref(false)
 const errorMessage = ref('')
 const successMessage = ref('')
-const avatarUrl = ref('./assets/logo.svg') // placeholder
+const avatarUrl = ref('./assets/logo.svg')
+const avatarPreview = ref('')
+const uploadingAvatar = ref(false)
+const fileInput = ref(null)
 
 const userListings = ref([])
 const loadingListings = ref(false)
@@ -128,6 +134,7 @@ watch(() => props.user, (u) => {
   if (u) {
     form.userName = u.userName || ''
     form.email = u.email || ''
+    avatarUrl.value = u.profileImageUrl ? resolveImage(u.profileImageUrl) : './assets/logo.svg'
   }
 }, { immediate: true })
 
@@ -176,13 +183,15 @@ async function submitProfile() {
     if (showChangePassword.value && passwords.newPass) {
       payload.password = passwords.newPass
     }
-    const { data } = await userApi.updateUser(props.user.userId, payload)
+    await userApi.updateUser(props.user.userId, payload)
     // After update, fetch latest user data from backend for consistency
     try {
       const refreshed = await userApi.getUser(props.user.userId)
       const updatedUser = refreshed.data
       localStorage.setItem('user', JSON.stringify(updatedUser))
       emit('user-updated', updatedUser)
+      // Update avatarUrl in case backend changed it elsewhere
+      avatarUrl.value = updatedUser.profileImageUrl ? resolveImage(updatedUser.profileImageUrl) : './assets/logo.svg'
     } catch {/* ignore secondary error */}
     successMessage.value = 'Profile updated successfully'
     showChangePassword.value = false
@@ -227,6 +236,71 @@ async function deleteListing(listing) {
     userListings.value = userListings.value.filter(l => l.listingId !== listing.listingId)
   } catch (e) {
     alert('Failed to delete')
+  }
+}
+
+function triggerFileSelect() {
+  resetMessages()
+  if (fileInput.value) fileInput.value.click()
+}
+
+function clearAvatarPreview() {
+  if (avatarPreview.value) {
+    try { URL.revokeObjectURL(avatarPreview.value) } catch {}
+    avatarPreview.value = ''
+  }
+}
+
+function onFileChosen(e) {
+  const file = e.target.files && e.target.files[0]
+  if (!file) return
+  // basic validation: max 5MB, image/*
+  if (!file.type.startsWith('image/')) {
+    errorMessage.value = 'Please select an image file'
+    return
+  }
+  const maxSize = 5 * 1024 * 1024
+  if (file.size > maxSize) {
+    errorMessage.value = 'Image must be under 5MB'
+    return
+  }
+  // Preview
+  clearAvatarPreview()
+  avatarPreview.value = URL.createObjectURL(file)
+  uploadAvatar(file)
+}
+
+async function uploadAvatar(file) {
+  uploadingAvatar.value = true
+  try {
+    const resp = await listingApi.uploadImage(file)
+    const imageUrl = resp.data?.url
+    if (!imageUrl) throw new Error('No URL returned from upload')
+
+    // Update user profile with new image URL, keep other fields
+    await userApi.updateUser(props.user.userId, {
+      userName: form.userName,
+      email: form.email,
+      profileImageUrl: imageUrl
+    })
+
+    // Refresh user data
+    try {
+      const refreshed = await userApi.getUser(props.user.userId)
+      const updatedUser = refreshed.data
+      localStorage.setItem('user', JSON.stringify(updatedUser))
+      emit('user-updated', updatedUser)
+      avatarUrl.value = updatedUser.profileImageUrl ? resolveImage(updatedUser.profileImageUrl) : './assets/logo.svg'
+    } catch {/* ignore */}
+
+    successMessage.value = 'Profile picture updated'
+  } catch (e) {
+    errorMessage.value = e.response?.data || e.message || 'Upload failed'
+  } finally {
+    // Always clear preview and input so the final server image shows and no leaks
+    clearAvatarPreview()
+    uploadingAvatar.value = false
+    if (fileInput.value) fileInput.value.value = ''
   }
 }
 
@@ -275,9 +349,11 @@ function formatDate(dt) {
 .listings-panel { flex:1; }
 .card { background:#fff; border-radius:18px; padding:1.5rem 1.6rem; box-shadow:0 4px 16px rgba(0,0,0,.07); border:1px solid #e2e8f0; }
 .user-summary { display:flex; gap:1rem; }
-avatar-wrapper { position:relative; }
+.avatar-wrapper { position:relative; display:flex; flex-direction:column; align-items:center; }
 .avatar { width:90px; height:90px; border-radius:50%; background:#eef2ff; object-fit:cover; border:4px solid #fff; box-shadow:0 2px 6px rgba(0,0,0,.15); }
-.change-avatar-btn { margin-top:.5rem; font-size:.7rem; padding:.35rem .6rem; border-radius:6px; border:1px solid #cbd5e1; background:#f8fafc; cursor:not-allowed; }
+.change-avatar-btn { margin-top:.5rem; font-size:.7rem; padding:.35rem .6rem; border-radius:6px; border:1px solid #cbd5e1; background:#f8fafc; cursor:pointer; }
+.change-avatar-btn:disabled { opacity:.7; cursor:not-allowed; }
+.hidden-file { display:none; }
 .user-meta h2 { margin:0 0 .4rem; font-size:1.4rem; }
 .user-meta .email { color:#64748b; margin:0 0 .3rem; font-size:.9rem; }
 .user-meta .role, .meta-dates { font-size:.75rem; text-transform:uppercase; letter-spacing:.5px; color:#475569; margin:.2rem 0; font-weight:600; }

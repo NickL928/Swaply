@@ -49,4 +49,5 @@ export default {
     const { data } = await client.post(`/${threadId}/replies`, { body })
     return data // ThreadReplyDto
   }
+
 }

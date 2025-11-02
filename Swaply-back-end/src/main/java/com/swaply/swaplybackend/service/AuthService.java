@@ -89,7 +89,7 @@ public class AuthService {
         userDto.setIsActive(user.getIsActive());
         userDto.setCreatedAt(user.getCreatedAt());
         userDto.setUpdatedAt(user.getUpdatedAt());
-
+        userDto.setProfileImageUrl(user.getProfileImageUrl());
         return userDto;
     }
 

@@ -32,6 +32,12 @@ public class SecurityConfig {
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/uploads/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/threads/**").permitAll()
+                        // Allow public browsing of auctions
+                        .requestMatchers(HttpMethod.GET, "/api/auctions/**").permitAll()
+                        // Public announcements fetch
+                        .requestMatchers(HttpMethod.GET, "/api/announcements/**").permitAll()
+                        // Admin-only endpoints
+                        .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .anyRequest().authenticated()
                 )

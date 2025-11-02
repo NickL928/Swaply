@@ -11,12 +11,15 @@
 
       <div class="meta-panel">
         <h1 class="title">{{ listing.title }}</h1>
+        <div class="seller-info" v-if="listing.sellerUsername">
+          <img class="seller-avatar" :src="resolveImage(listing.sellerProfileImageUrl)" alt="Seller avatar" />
+          <span class="seller-name">{{ listing.sellerUsername }}</span>
+        </div>
         <div class="price">{{ formatPrice(listing.price) }}</div>
 
         <div class="badges">
           <span class="badge category">{{ prettyEnum(listing.category) }}</span>
           <span class="badge condition">{{ prettyEnum(listing.condition) }}</span>
-          <span class="badge seller" v-if="listing.sellerUsername">Seller: {{ listing.sellerUsername }}</span>
         </div>
 
         <div class="desc">
@@ -156,8 +159,13 @@ const resolveImage = (path)=>{
 }
 .image-wrap img { width: 100%; height: 100%; object-fit: cover; display: block; }
 
-.meta-panel { display: flex; flex-direction: column; gap: 1rem; }
+.meta-panel { display: flex; flex-direction: column; gap: 0.75rem; }
 .title { font-size: 2rem; font-weight: 800; color: #111827; margin: 0 0 .25rem; }
+
+.seller-info { display: flex; align-items: center; gap: .6rem; }
+.seller-avatar { width: 36px; height: 36px; border-radius: 50%; object-fit: cover; background:#f1f5f9; border:1px solid #e2e8f0 }
+.seller-name { font-weight: 800; color: #0f172a; }
+
 .price {
   font-size: 2rem;
   font-weight: 900;
@@ -169,7 +177,6 @@ const resolveImage = (path)=>{
 .badge { padding: .35rem .7rem; border-radius: 12px; font-size: .8rem; font-weight: 700; letter-spacing: .3px; }
 .badge.category { background: #eef2ff; color: #4338ca; }
 .badge.condition { background: #f1f5f9; color: #475569; }
-.badge.seller { background: #ecfeff; color: #155e75; }
 
 .desc {
   background: #f8fafc;

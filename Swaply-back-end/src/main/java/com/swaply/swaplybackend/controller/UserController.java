@@ -6,6 +6,7 @@ import com.swaply.swaplybackend.service.IUserService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -23,8 +24,11 @@ private final IUserService userService;
         this.userService = userService;
     }
 
+    @Autowired
+    private PasswordEncoder passwordEncoder;
+
     @PostMapping
-    public ResponseEntity<String> createUser(@RequestBody UserDto userDto) {
+    public ResponseEntity<?> createUser(@RequestBody UserDto userDto) {
 
         if (userDto.getUserName() == null || userDto.getUserName().trim().isEmpty()) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Username is required");
@@ -37,11 +41,16 @@ private final IUserService userService;
         User user = new User();
         user.setUserName(userDto.getUserName());
         user.setEmail(userDto.getEmail());
-        user.setPassword(userDto.getPassword()); //need to hash pass later
+        if (userDto.getPassword() != null && !userDto.getPassword().isEmpty()) {
+            user.setPassword(passwordEncoder.encode(userDto.getPassword()));
+        }
+        user.setProfileImageUrl(userDto.getProfileImageUrl());
 
         try {
             userService.addUser(user);
-            return ResponseEntity.status(HttpStatus.CREATED).body("User created successfully");
+            UserDto created = new UserDto(user.getUserId(), user.getUserName(), user.getEmail());
+            created.setProfileImageUrl(user.getProfileImageUrl());
+            return ResponseEntity.status(HttpStatus.CREATED).body(created);
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
         }
@@ -53,6 +62,7 @@ private final IUserService userService;
         if (userOpt.isPresent()) {
             User user = userOpt.get();
             UserDto userDto = new UserDto(user.getUserId(), user.getUserName(), user.getEmail());
+            userDto.setProfileImageUrl(user.getProfileImageUrl());
             return ResponseEntity.ok(userDto);
         } else {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
@@ -72,9 +82,12 @@ private final IUserService userService;
             User userToUpdate = userOpt.get();
             userToUpdate.setUserName(userDto.getUserName());
             userToUpdate.setEmail(userDto.getEmail());
+            if (userDto.getProfileImageUrl() != null) {
+                userToUpdate.setProfileImageUrl(userDto.getProfileImageUrl());
+            }
             // Only update password if it's provided
             if (userDto.getPassword() != null && !userDto.getPassword().isEmpty()) {
-                userToUpdate.setPassword(userDto.getPassword()); //need to hash pass later
+                userToUpdate.setPassword(passwordEncoder.encode(userDto.getPassword()));
             }
             try {
                 userService.updateUser(userToUpdate);
@@ -94,6 +107,7 @@ private final IUserService userService;
         if (user.isPresent()) {
             User foundUser = user.get();
             UserDto userDto = new UserDto(foundUser.getUserId(), foundUser.getUserName(), foundUser.getEmail());
+            userDto.setProfileImageUrl(foundUser.getProfileImageUrl());
             return ResponseEntity.ok(userDto);
         } else {
             return  ResponseEntity.status(HttpStatus.NOT_FOUND).build();
@@ -106,6 +120,7 @@ private final IUserService userService;
         if (user.isPresent()) {
             User foundUser = user.get();
             UserDto userDto = new UserDto(foundUser.getUserId(), foundUser.getUserName(), foundUser.getEmail());
+            userDto.setProfileImageUrl(foundUser.getProfileImageUrl());
             return ResponseEntity.ok(userDto);
         } else {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).build();

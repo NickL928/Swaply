@@ -177,6 +177,9 @@ public class ListingService implements IListingService {
         dto.setStatus(listing.getStatus());
         dto.setUserId(listing.getUser().getUserId());
         dto.setUserName(listing.getUser().getUserName());
+        // Populate lister info for UI
+        dto.setSellerUsername(listing.getUser().getUserName());
+        dto.setSellerProfileImageUrl(listing.getUser().getProfileImageUrl());
         dto.setCreatedDate(listing.getCreatedDate());
         dto.setUpdatedDate(listing.getUpdatedDate());
         return dto;

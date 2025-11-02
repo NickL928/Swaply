@@ -13,6 +13,7 @@
         <nav class="nav-menu">
           <a href="#" class="nav-link active">Home</a>
           <a href="#" class="nav-link" @click.prevent="goCommunity">Community</a>
+          <a href="#" class="nav-link" @click.prevent="goBidding">Bidding</a>
           <a href="#" class="nav-link">Buy Requests</a>
           <a href="#" class="nav-link">System Announcements</a>
           <a href="#" class="nav-link">Message & Feedback</a>
@@ -32,7 +33,7 @@
             <img
               alt="Profile"
               class="profile-picture"
-              src="./assets/logo.svg"
+              :src="avatarSrc"
               width="40"
               height="40"
               @click="goProfile"
@@ -104,6 +105,10 @@
             </div>
             <div class="item-content">
               <h3 class="item-title">{{ item.title }}</h3>
+              <div class="seller-row" v-if="item.sellerUsername">
+                <img class="seller-avatar" :src="resolveImage(item.sellerProfileImageUrl)" alt="seller" />
+                <span class="seller-name">{{ item.sellerUsername }}</span>
+              </div>
               <p class="item-price">{{ formatPrice(item.price) }}</p>
               <p class="item-description ellipsis">{{ item.description }}</p>
               <div class="meta-row">
@@ -254,6 +259,7 @@ const logout = () => emit('logout')
 const goProfile = () => emit('navigate', 'profile')
 const goCart = () => emit('navigate', 'cart')
 const goCommunity = () => emit('navigate', 'community')
+const goBidding = () => emit('navigate', 'bidding')
 
 const formatPrice = (price) => {
   if (price == null) return '$—'
@@ -279,6 +285,18 @@ const resolveImage = (path) => {
   if (path.startsWith('uploads/')) return '/' + path
   return path
 }
+
+const avatarSrc = computed(() => {
+  try {
+    const u = JSON.parse(localStorage.getItem('user'))
+    const p = u?.profileImageUrl
+    if (!p) return './assets/logo.svg'
+    if (p.startsWith('http://') || p.startsWith('https://')) return p
+    if (p.startsWith('/uploads/')) return p
+    if (p.startsWith('uploads/')) return '/' + p
+    return p
+  } catch { return './assets/logo.svg' }
+})
 </script>
 
 <style scoped>
@@ -642,5 +660,27 @@ const resolveImage = (path) => {
 .pagination-button:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+}
+
+.seller-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0.15rem 0 0.35rem 0;
+}
+
+.seller-avatar {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+}
+
+.seller-name {
+  font-weight: 700;
+  color: #0f172a;
+  font-size: 0.9rem;
 }
 </style>

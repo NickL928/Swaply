@@ -18,6 +18,8 @@ public class ListingDto {
     private ListingStatus status;
     private Long userId;
     private String userName;
+    private String sellerUsername;
+    private String sellerProfileImageUrl;
     private LocalDateTime createdDate;
     private LocalDateTime updatedDate;
 
@@ -34,6 +36,7 @@ public class ListingDto {
         this.status = status;
         this.userId = userId;
         this.userName = userName;
+        this.sellerUsername = userName;
         this.createdDate = createdDate;
         this.updatedDate = updatedDate;
     }
@@ -118,6 +121,22 @@ public class ListingDto {
 
     public void setUserName(String userName) {
         this.userName = userName;
+    }
+
+    public String getSellerUsername() {
+        return sellerUsername;
+    }
+
+    public void setSellerUsername(String sellerUsername) {
+        this.sellerUsername = sellerUsername;
+    }
+
+    public String getSellerProfileImageUrl() {
+        return sellerProfileImageUrl;
+    }
+
+    public void setSellerProfileImageUrl(String sellerProfileImageUrl) {
+        this.sellerProfileImageUrl = sellerProfileImageUrl;
     }
 
     public LocalDateTime getCreatedDate() {

@@ -7,6 +7,10 @@ import ProfilePage from './ProfilePage.vue'
 import ListingDetail from './ListingDetail.vue'
 import CartPage from './CartPage.vue'
 import CommunityPage from './CommunityPage.vue'
+import BiddingPage from './BiddingPage.vue'
+import AuctionDetail from './AuctionDetail.vue'
+import CreateAuctionPage from './CreateAuctionPage.vue'
+import AdminPage from './AdminPage.vue'
 
 // track current internal page AFTER authentication
 const currentPage = ref('home')
@@ -16,6 +20,8 @@ const isAuthenticated = ref(false)
 const currentUser = ref(null)
 // selected listing id for detail page
 const selectedListingId = ref(null)
+// selected auction id for detail page
+const selectedAuctionId = ref(null)
 
 onMounted(() => {
   const token = localStorage.getItem('token')
@@ -23,6 +29,7 @@ onMounted(() => {
     isAuthenticated.value = true
     try {
       currentUser.value = JSON.parse(localStorage.getItem('user'))
+      if (currentUser.value?.role === 'ADMIN') currentPage.value = 'admin'
     } catch (e) { /* ignore parse error */ }
   }
 })
@@ -31,13 +38,16 @@ const handleNavigation = (page, payload) => {
   if (page === 'listing-detail') {
     selectedListingId.value = payload?.listingId ?? null
   }
+  if (page === 'auction-detail') {
+    selectedAuctionId.value = payload?.auctionId ?? null
+  }
   currentPage.value = page
 }
 
 const handleLoginSuccess = (user) => {
   currentUser.value = user
   isAuthenticated.value = true
-  currentPage.value = 'home'
+  currentPage.value = user?.role === 'ADMIN' ? 'admin' : 'home'
 }
 
 const handleLogout = () => {
@@ -56,8 +66,13 @@ const handleLogout = () => {
 
     <!-- Main app after auth -->
     <template v-else>
+      <AdminPage
+        v-if="currentPage === 'admin'"
+        @navigate="handleNavigation"
+        @logout="handleLogout"
+      />
       <HomePage
-        v-if="currentPage === 'home'"
+        v-else-if="currentPage === 'home'"
         @navigate="handleNavigation"
         @logout="handleLogout"
       />
@@ -83,6 +98,19 @@ const handleLogout = () => {
       />
       <CommunityPage
         v-else-if="currentPage === 'community'"
+        @navigate="handleNavigation"
+      />
+      <BiddingPage
+        v-else-if="currentPage === 'bidding'"
+        @navigate="handleNavigation"
+      />
+      <AuctionDetail
+        v-else-if="currentPage === 'auction-detail' && selectedAuctionId != null"
+        :auctionId="selectedAuctionId"
+        @navigate="handleNavigation"
+      />
+      <CreateAuctionPage
+        v-else-if="currentPage === 'create-auction'"
         @navigate="handleNavigation"
       />
     </template>
