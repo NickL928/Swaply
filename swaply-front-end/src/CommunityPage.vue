@@ -2,6 +2,7 @@
 import { ref, onMounted } from 'vue'
 import ThreadList from './components/community/ThreadList.vue'
 import communityApi from './services/communityApi.js'
+import AppHeader from './components/AppHeader.vue'
 
 const emit = defineEmits(['navigate'])
 
@@ -179,30 +180,10 @@ onMounted(() => { loadLikedMap(); load() })
 
 <template>
   <div class="community-root">
-    <!-- Themed Header -->
-    <header class="header">
-      <div class="header-content">
-        <div class="logo-section" @click="goHome" style="cursor:pointer">
-          <img alt="Swaply logo" class="logo" src="./assets/logo.svg" width="36" height="36" />
-          <span class="logo-text">Swaply</span>
-        </div>
-        <nav class="nav-menu">
-          <a href="#" class="nav-link" @click.prevent="goHome">Home</a>
-          <a href="#" class="nav-link active">Community</a>
-        </nav>
-        <div class="header-actions">
-          <button class="pill-btn" @click="goHome">Back to Home</button>
-        </div>
-      </div>
-    </header>
+    <AppHeader active="community" @navigate="(p)=>{ if(p==='home') goHome(); else $emit('navigate',p) }" />
 
     <main class="main">
       <div class="content-wrap">
-        <header class="community-header">
-          <h1>Community</h1>
-          <p class="subtitle">Discuss, ask questions, and share updates.</p>
-        </header>
-
         <!-- Thread post form -->
         <div class="thread-post-form">
           <h2>Start a New Thread</h2>
@@ -298,44 +279,7 @@ onMounted(() => { loadLikedMap(); load() })
 </template>
 
 <style scoped>
-/* Header (match Home) */
-.header {
-  background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
-  box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
-  position: sticky;
-  top: 0;
-  z-index: 100;
-}
-.header-content {
-  padding: 1rem 2rem;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-}
-.logo-section { display: flex; align-items: center; gap: .6rem; }
-.logo { filter: brightness(0) invert(1); border-radius: 8px; }
-.logo-text { color: #fff; font-weight: 800; font-size: 1.4rem; }
-.nav-menu { display: flex; gap: .5rem; justify-content: center; }
-.nav-link {
-  text-decoration: none;
-  color: rgba(255,255,255,0.9);
-  font-weight: 600;
-  padding: 0.5rem 1rem;
-  border-radius: 12px;
-  transition: all .2s ease;
-}
-.nav-link:hover, .nav-link.active { color: #fff; background: rgba(255,255,255,0.2); }
-.header-actions { display: flex; align-items: center; gap: .5rem; }
-.pill-btn {
-  background: rgba(255,255,255,0.2);
-  color: white;
-  border: 2px solid rgba(255,255,255,0.3);
-  padding: 0.5rem 0.9rem;
-  border-radius: 12px;
-  font-weight: 700;
-  cursor: pointer;
-}
+/* Remove local header styles; use shared AppHeader */
 
 /* Layout */
 .main { padding: 1.5rem 2rem; background: #f8fafc; min-height: calc(100vh - 64px); }

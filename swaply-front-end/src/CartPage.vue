@@ -67,6 +67,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import cartApi from './services/cartApi.js'
+import { fmtFt } from './services/currency.js'
 
 const emit = defineEmits(['navigate'])
 
@@ -94,12 +95,7 @@ onMounted(load)
 const grandTotal = computed(() => items.value.reduce((s,i)=> s + parseFloat(i.lineTotal),0))
 const totalItems = computed(() => items.value.reduce((s,i)=> s + i.quantity,0))
 
-const money = v => {
-  if (v == null) return '$—'
-  const num = typeof v === 'number' ? v : parseFloat(v)
-  if (isNaN(num)) return '$—'
-  return num.toLocaleString(undefined,{ style:'currency', currency:'USD' })
-}
+const money = v => fmtFt(v)
 
 const remove = async (id) => {
   try {
@@ -142,7 +138,7 @@ const goHome = () => emit('navigate','home')
 const openListing = (id) => emit('navigate','listing-detail',{ listingId: id })
 
 const resolveImage = (p) => {
-  const placeholder = './assets/logo.svg'
+  const placeholder = './assets/logo.png'
   if (!p) return placeholder
   if (p.startsWith('http')) return p
   if (p.startsWith('/uploads/')) return p

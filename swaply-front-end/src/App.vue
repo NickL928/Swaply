@@ -11,6 +11,9 @@ import BiddingPage from './BiddingPage.vue'
 import AuctionDetail from './AuctionDetail.vue'
 import CreateAuctionPage from './CreateAuctionPage.vue'
 import AdminPage from './AdminPage.vue'
+import ChatPage from './ChatPage.vue'
+import ChatWidget from './components/ChatWidget.vue'
+import AnnouncementsPage from './AnnouncementsPage.vue'
 
 // track current internal page AFTER authentication
 const currentPage = ref('home')
@@ -23,6 +26,9 @@ const selectedListingId = ref(null)
 // selected auction id for detail page
 const selectedAuctionId = ref(null)
 
+// chat modal open state
+const chatOpen = ref(false)
+
 onMounted(() => {
   const token = localStorage.getItem('token')
   if (token) {
@@ -32,6 +38,8 @@ onMounted(() => {
       if (currentUser.value?.role === 'ADMIN') currentPage.value = 'admin'
     } catch (e) { /* ignore parse error */ }
   }
+  // open chat widget when any page dispatches an event
+  window.addEventListener('open-chat', () => { chatOpen.value = true })
 })
 
 const handleNavigation = (page, payload) => {
@@ -48,6 +56,8 @@ const handleLoginSuccess = (user) => {
   currentUser.value = user
   isAuthenticated.value = true
   currentPage.value = user?.role === 'ADMIN' ? 'admin' : 'home'
+  // notify listeners (e.g., ChatWidget) that auth context changed
+  window.dispatchEvent(new CustomEvent('auth-changed', { detail: { state: 'logged-in', user } }))
 }
 
 const handleLogout = () => {
@@ -56,6 +66,7 @@ const handleLogout = () => {
   isAuthenticated.value = false
   currentUser.value = null
   currentPage.value = 'home'
+  window.dispatchEvent(new CustomEvent('auth-changed', { detail: { state: 'logged-out' } }))
 }
 </script>
 
@@ -85,7 +96,7 @@ const handleLogout = () => {
         :user="currentUser"
         @navigate="handleNavigation"
         @logout="handleLogout"
-        @user-updated="u => currentUser = u"
+        @user-updated="u => currentUser.value = u"
       />
       <ListingDetail
         v-else-if="currentPage === 'listing-detail' && selectedListingId != null"
@@ -113,6 +124,17 @@ const handleLogout = () => {
         v-else-if="currentPage === 'create-auction'"
         @navigate="handleNavigation"
       />
+      <ChatPage
+        v-else-if="currentPage === 'chat'"
+        @navigate="handleNavigation"
+      />
+      <AnnouncementsPage
+        v-else-if="currentPage === 'announcements'"
+        @navigate="handleNavigation"
+      />
+
+      <!-- Global DM widget -->
+      <ChatWidget v-model:open="chatOpen" />
     </template>
   </div>
 </template>

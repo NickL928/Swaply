@@ -49,6 +49,7 @@
 import { ref, onMounted, computed } from 'vue'
 import listingApi from './services/listingApi.js'
 import cartApi from './services/cartApi.js'
+import { fmtFt } from './services/currency.js'
 const props = defineProps({ listingId: { type: Number, required: true } })
 const emit = defineEmits(['navigate'])
 const listing = ref(null)
@@ -97,7 +98,7 @@ const add = async () => {
 }
 const goBack = () => emit('navigate','home')
 const goCart = () => emit('navigate','cart')
-const formatPrice = (p)=> (p==null? '—' : Number(p).toLocaleString(undefined,{style:'currency',currency:'USD'}))
+const formatPrice = (p)=> fmtFt(p)
 const prettyEnum = (val) => {
   if (!val) return ''
   return String(val)
@@ -107,7 +108,7 @@ const prettyEnum = (val) => {
     .join(' ')
 }
 const resolveImage = (path)=>{
-  if(!path) return './assets/logo.svg'
+  if(!path) return './assets/logo.png'
   if(path.startsWith('http')) return path
   if(path.startsWith('/uploads/')) return path
   if(path.startsWith('uploads/')) return '/' + path

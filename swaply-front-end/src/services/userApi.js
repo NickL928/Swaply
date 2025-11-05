@@ -12,6 +12,9 @@ export default {
   getUser(id) { // Returns Promise<UserDto>
     return client.get(`/${id}`);
   },
+  list() { // list all users (auth required)
+    return client.get('');
+  },
   updateUser(id, payload) { // payload: { userName, email, password? }
     return client.put(`/${id}`, payload, { headers: { 'Content-Type': 'application/json' } });
   },

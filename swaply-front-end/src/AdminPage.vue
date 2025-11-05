@@ -2,7 +2,7 @@
   <div class="admin-container">
     <header class="admin-header">
       <div class="logo" @click="$emit('navigate','home')">
-        <img src="./assets/logo.svg" alt="logo" />
+        <img src="./assets/logo.png" alt="logo" width="40" height="40" />
         <h1>Admin Panel</h1>
       </div>
       <div class="spacer" />
@@ -36,15 +36,21 @@
           <h2>Users</h2>
           <div class="table">
             <div class="row head">
-              <div>ID</div><div>Username</div><div>Email</div><div>Role</div><div>Active</div><div>Ops</div>
+              <div>ID</div><div>Avatar</div><div>Username</div><div>Email</div><div>Role</div><div>Active</div><div>Ops</div>
             </div>
             <div v-for="u in users" :key="u.userId" class="row">
               <div>{{ u.userId }}</div>
+              <div>
+                <img v-if="u.profileImageUrl" :src="u.profileImageUrl" alt="avatar" class="avatar" />
+                <div v-else class="avatar placeholder">{{ (u.userName||'?').charAt(0).toUpperCase() }}</div>
+              </div>
               <div>{{ u.userName }}</div>
               <div>{{ u.email }}</div>
               <div>{{ u.role }}</div>
               <div>{{ u.isActive ? 'Yes' : 'No' }}</div>
               <div class="ops">
+                <input type="file" accept="image/*" :ref="el => fileInputs[u.userId] = el" style="display:none" @change="onFileSelected(u, $event)" />
+                <button @click="chooseFile(u)">Change Photo</button>
                 <button @click="setRole(u,'ADMIN')" v-if="u.role!=='ADMIN'">Make Admin</button>
                 <button @click="setRole(u,'USER')" v-if="u.role!=='USER'">Make User</button>
                 <button @click="toggleActive(u)">{{ u.isActive ? 'Deactivate' : 'Activate' }}</button>
@@ -137,6 +143,7 @@ const newAnn = ref({ title:'', content:'', active:true })
 const orders = ref([])
 const bids = ref([])
 const listings = ref([])
+const fileInputs = ref({})
 
 function authHeaders() {
   const token = localStorage.getItem('token')
@@ -197,14 +204,47 @@ async function removeAnnouncement(a) {
   await loadAnnouncements()
 }
 
+function chooseFile(u) {
+  const input = fileInputs.value[u.userId]
+  if (input) input.click()
+}
+
+async function onFileSelected(u, evt) {
+  const file = evt.target.files && evt.target.files[0]
+  evt.target.value = '' // reset so same file can be selected again
+  if (!file) return
+  const maxSize = 5 * 1024 * 1024
+  if (file.size > maxSize) {
+    alert('File too large. Max 5MB.')
+    return
+  }
+  try {
+    const fd = new FormData()
+    fd.append('file', file)
+    const { data } = await axios.post('/api/files/upload', fd, {
+      headers: { ...authHeaders(), 'Content-Type': 'multipart/form-data' }
+    })
+    // Update user's profileImageUrl while preserving other fields
+    await axios.put(`/api/user/${u.userId}`, {
+      userName: u.userName,
+      email: u.email,
+      profileImageUrl: data.url
+    }, { headers: authHeaders() })
+    await loadUsers()
+  } catch (e) {
+    console.error(e)
+    alert('Upload failed')
+  }
+}
+
 onMounted(() => { loadStats() })
 </script>
 
 <style scoped>
-.admin-container { min-height:100vh; background:#f1f5f9; display:flex; flex-direction:column; }
+.admin-container { min-height:100vh; background:#0b1220; display:flex; flex-direction:column; }
 .admin-header { display:flex; align-items:center; padding:1rem 1.5rem; background:linear-gradient(135deg,#111827,#1f2937); color:#fff; }
 .logo { display:flex; align-items:center; gap:.75rem; cursor:pointer; }
-.logo img { width:36px; height:36px; filter:brightness(0) invert(1); }
+.logo img { width:40px; height:40px; filter:brightness(0) invert(1); }
 .logo h1 { font-size:1.25rem; margin:0; }
 .spacer { flex:1; }
 .logout { background:#ef4444; border:none; color:#fff; padding:.6rem .9rem; border-radius:8px; cursor:pointer; font-weight:700; }
@@ -212,14 +252,23 @@ onMounted(() => { loadStats() })
 .sidebar { width:220px; background:#111827; color:#fff; display:flex; flex-direction:column; padding:1rem; gap:.5rem; }
 .sidebar button { text-align:left; padding:.6rem .7rem; border:none; border-radius:8px; background:transparent; color:#cbd5e1; cursor:pointer; font-weight:700; }
 .sidebar button.active, .sidebar button:hover { background:#1f2937; color:#fff; }
-.content { flex:1; padding:1rem 1.5rem; display:flex; flex-direction:column; gap:1rem; }
-.card { background:#fff; border-radius:14px; padding:1rem; border:1px solid #e5e7eb; }
+.content { flex:1; padding:1rem 1.5rem; display:flex; flex-direction:column; gap:1rem; background:#0f172a; color:#e5e7eb; }
+.card { background:#111827; border-radius:14px; padding:1rem; border:1px solid #374151; color:#e5e7eb; }
 .stats { display:grid; grid-template-columns:repeat(3,1fr); gap:1rem; }
+.stats .stat { background:#0b1220; border:1px solid #374151; border-radius:10px; padding:.75rem; color:#e2e8f0; }
 .table { display:flex; flex-direction:column; gap:.25rem; }
-.row { display:grid; grid-template-columns: 60px 1fr 1.5fr 100px 80px 200px; gap:.5rem; padding:.4rem .5rem; border-bottom:1px solid #e5e7eb; align-items:center; }
-.row.head { font-weight:800; background:#f8fafc; }
-.ops button { margin-right:.5rem; }
+.row { display:grid; grid-template-columns: 60px 60px 1fr 1.5fr 100px 80px 260px; gap:.5rem; padding:.4rem .5rem; border-bottom:1px solid #374151; align-items:center; }
+.row.head { font-weight:800; background:#1f2937; color:#f9fafb; }
+.ops button { margin-right:.5rem; background:#374151; color:#f8fafc; border:none; padding:.4rem .6rem; border-radius:6px; }
 .announce-form { display:flex; flex-direction:column; gap:.5rem; margin-bottom:1rem; }
-.announce-form input, .announce-form textarea { padding:.5rem .6rem; border:1px solid #cbd5e1; border-radius:8px; }
-.announce { border:1px solid #e5e7eb; border-radius:10px; padding:.6rem .8rem; margin-bottom:.5rem; }
+.announce-form input, .announce-form textarea { padding:.5rem .6rem; border:1px solid #374151; border-radius:8px; background:#0b1220; color:#e5e7eb; }
+.announce-form input::placeholder, .announce-form textarea::placeholder { color:#94a3b8; }
+.announce { border:1px solid #374151; border-radius:10px; padding:.6rem .8rem; margin-bottom:.5rem; background:#0b1220; }
+.avatar { width:40px; height:40px; border-radius:50%; object-fit:cover; border:1px solid #334155; }
+.avatar.placeholder { display:flex; align-items:center; justify-content:center; background:#1f2937; color:#e2e8f0; font-weight:800; }
+
+/* Headings contrast */
+.card h2 { color:#f3f4f6; }
+.card h4 { color:#e5e7eb; }
+.card small { color:#94a3b8; }
 </style>

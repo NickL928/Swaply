@@ -1,48 +1,6 @@
 <template>
   <div class="home-container">
-    <!-- Header/Navigation -->
-    <header class="header">
-      <div class="header-content">
-        <!-- Logo -->
-        <div class="logo-section">
-          <img alt="Swaply logo" class="logo" src="./assets/logo.svg" width="40" height="40" />
-          <span class="logo-text">Swaply</span>
-        </div>
-
-        <!-- Navigation -->
-        <nav class="nav-menu">
-          <a href="#" class="nav-link active">Home</a>
-          <a href="#" class="nav-link" @click.prevent="goCommunity">Community</a>
-          <a href="#" class="nav-link" @click.prevent="goBidding">Bidding</a>
-          <a href="#" class="nav-link">Buy Requests</a>
-          <a href="#" class="nav-link">System Announcements</a>
-          <a href="#" class="nav-link">Message & Feedback</a>
-        </nav>
-
-        <!-- User Profile & DM -->
-        <div class="header-actions">
-          <button class="dm-button">
-            <span class="dm-icon">💬</span>
-            DM
-          </button>
-          <button class="cart-button" @click="goCart" aria-label="Cart">
-            <span class="cart-icon">🛒</span>
-            <span v-if="cartCount > 0" class="cart-badge">{{ cartCount }}</span>
-          </button>
-          <div class="profile-section">
-            <img
-              alt="Profile"
-              class="profile-picture"
-              :src="avatarSrc"
-              width="40"
-              height="40"
-              @click="goProfile"
-            />
-          </div>
-          <button class="logout-button" @click="logout">Logout</button>
-        </div>
-      </div>
-    </header>
+    <AppHeader active="home" @navigate="(p)=>emit('navigate',p)" @logout="logout" />
 
     <!-- Main Content -->
     <main class="main-content">
@@ -144,8 +102,10 @@
 
 <script setup>
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
+import AppHeader from './components/AppHeader.vue'
 import listingApi from './services/listingApi.js'
 import cartApi from './services/cartApi.js'
+import { fmtFt } from './services/currency.js'
 
 const emit = defineEmits(['navigate','logout'])
 
@@ -159,7 +119,7 @@ const listings = ref([])
 const categoryCycle = ['ELECTRONICS','BOOKS','FURNITURE','CLOTHING','SPORTS','NECESSITIES','TOYS_GAMES','OTHER']
 const categoryIndex = ref(0)
 
-const placeholderImage = './assets/logo.svg'
+const placeholderImage = './assets/logo.png'
 
 const cartCount = ref(0)
 async function refreshCartCount() {
@@ -210,12 +170,7 @@ const filteredItems = computed(() => {
 
   if (searchQuery.value) {
     const q = searchQuery.value.toLowerCase()
-    items = items.filter(i =>
-      i.title?.toLowerCase().includes(q) ||
-      i.description?.toLowerCase().includes(q) ||
-      i.category?.toLowerCase().includes(q) ||
-      i.condition?.toLowerCase().includes(q)
-    )
+    items = items.filter(i => (i.title||'').toLowerCase().includes(q) || (i.description||'').toLowerCase().includes(q))
   }
   return items
 })
@@ -262,10 +217,7 @@ const goCommunity = () => emit('navigate', 'community')
 const goBidding = () => emit('navigate', 'bidding')
 
 const formatPrice = (price) => {
-  if (price == null) return '$—'
-  const num = typeof price === 'number' ? price : parseFloat(price)
-  if (isNaN(num)) return '$—'
-  return num.toLocaleString(undefined, { style: 'currency', currency: 'USD' })
+  return fmtFt(price)
 }
 
 const prettyEnum = (val) => {
@@ -278,7 +230,7 @@ const prettyEnum = (val) => {
 }
 
 const resolveImage = (path) => {
-  const placeholderImage = './assets/logo.svg'
+  const placeholderImage = './assets/logo.png'
   if (!path) return placeholderImage
   if (path.startsWith('http://') || path.startsWith('https://')) return path
   if (path.startsWith('/uploads/')) return path
@@ -290,13 +242,18 @@ const avatarSrc = computed(() => {
   try {
     const u = JSON.parse(localStorage.getItem('user'))
     const p = u?.profileImageUrl
-    if (!p) return './assets/logo.svg'
+    if (!p) return './assets/logo.png'
     if (p.startsWith('http://') || p.startsWith('https://')) return p
     if (p.startsWith('/uploads/')) return p
     if (p.startsWith('uploads/')) return '/' + p
     return p
-  } catch { return './assets/logo.svg' }
+  } catch { return './assets/logo.png' }
 })
+
+function toggleChat(){
+  // open the global chat widget
+  window.dispatchEvent(new Event('open-chat'))
+}
 </script>
 
 <style scoped>
@@ -307,165 +264,6 @@ const avatarSrc = computed(() => {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
-}
-
-/* Header Styles */
-.header {
-  background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
-  border-bottom: none;
-  box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
-  position: sticky;
-  top: 0;
-  z-index: 100;
-  width: 100%;
-}
-
-.header-content {
-  width: 100%;
-  max-width: none;
-  margin: 0;
-  padding: 1.25rem 2rem;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 2rem;
-  box-sizing: border-box;
-}
-
-.logo-section {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  flex-shrink: 0;
-}
-
-.logo {
-  border-radius: 8px;
-  filter: brightness(0) invert(1);
-}
-
-.logo-text {
-  font-size: 1.75rem;
-  font-weight: 800;
-  color: white;
-  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-}
-
-.nav-menu {
-  display: flex;
-  gap: 0.5rem;
-  flex-grow: 1;
-  justify-content: center;
-}
-
-.nav-link {
-  text-decoration: none;
-  color: rgba(255, 255, 255, 0.9);
-  font-weight: 600;
-  padding: 0.75rem 1.25rem;
-  border-radius: 12px;
-  transition: all 0.3s;
-  white-space: nowrap;
-  font-size: 0.95rem;
-}
-
-.nav-link:hover,
-.nav-link.active {
-  color: white;
-  background: rgba(255, 255, 255, 0.2);
-  backdrop-filter: blur(10px);
-  transform: translateY(-1px);
-}
-
-.header-actions {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  flex-shrink: 0;
-}
-
-.dm-button {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  background: rgba(255, 255, 255, 0.2);
-  color: white;
-  border: 2px solid rgba(255, 255, 255, 0.3);
-  padding: 0.75rem 1.25rem;
-  border-radius: 12px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.3s;
-  backdrop-filter: blur(10px);
-}
-
-.dm-button:hover {
-  background: rgba(255, 255, 255, 0.3);
-  border-color: rgba(255, 255, 255, 0.5);
-  transform: translateY(-2px);
-}
-
-.dm-icon {
-  font-size: 1.1rem;
-}
-
-.cart-button {
-  position: relative;
-  background: rgba(255, 255, 255, 0.2);
-  color: white;
-  border: 2px solid rgba(255, 255, 255, 0.3);
-  padding: 0.6rem 0.8rem;
-  border-radius: 12px;
-  font-weight: 700;
-  cursor: pointer;
-  transition: all 0.3s;
-  backdrop-filter: blur(10px);
-}
-
-.cart-button:hover {
-  background: rgba(255, 255, 255, 0.3);
-  border-color: rgba(255, 255, 255, 0.5);
-  transform: translateY(-2px);
-}
-
-.cart-badge {
-  position: absolute;
-  top: -6px;
-  right: -6px;
-  background: #ef4444;
-  color: white;
-  border-radius: 9999px;
-  padding: 0 6px;
-  font-size: 12px;
-}
-
-.profile-section {
-  display: flex;
-  align-items: center;
-}
-
-.profile-picture {
-  border-radius: 50%;
-  border: 2px solid rgba(255, 255, 255, 0.5);
-  cursor: pointer;
-}
-
-.logout-button {
-  background: rgba(255, 255, 255, 0.2);
-  color: white;
-  border: 2px solid rgba(255, 255, 255, 0.3);
-  padding: 0.6rem 0.8rem;
-  border-radius: 12px;
-  font-weight: 700;
-  cursor: pointer;
-  transition: all 0.3s;
-  backdrop-filter: blur(10px);
-}
-
-.logout-button:hover {
-  background: rgba(255, 255, 255, 0.3);
-  border-color: rgba(255, 255, 255, 0.5);
-  transform: translateY(-2px);
 }
 
 /* Main Content */

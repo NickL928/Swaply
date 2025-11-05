@@ -2,7 +2,7 @@
   <div class="profile-container">
     <header class="profile-header">
       <div class="logo-block" @click="$emit('navigate','home')">
-        <img src="./assets/logo.svg" alt="Logo" class="logo" />
+        <img src="./assets/logo.png" alt="Logo" class="logo" />
         <h1>Swaply</h1>
       </div>
       <div class="header-actions">
@@ -110,6 +110,7 @@
 import { ref, reactive, watch, onMounted } from 'vue'
 import userApi from './services/userApi.js'
 import listingApi from './services/listingApi.js'
+import { fmtFt } from './services/currency.js'
 
 const props = defineProps({ user: { type: Object, required: true } })
 const emit = defineEmits(['user-updated','navigate','logout'])
@@ -121,7 +122,7 @@ const saving = ref(false)
 const deleting = ref(false)
 const errorMessage = ref('')
 const successMessage = ref('')
-const avatarUrl = ref('./assets/logo.svg')
+const avatarUrl = ref('./assets/logo.png')
 const avatarPreview = ref('')
 const uploadingAvatar = ref(false)
 const fileInput = ref(null)
@@ -134,7 +135,7 @@ watch(() => props.user, (u) => {
   if (u) {
     form.userName = u.userName || ''
     form.email = u.email || ''
-    avatarUrl.value = u.profileImageUrl ? resolveImage(u.profileImageUrl) : './assets/logo.svg'
+    avatarUrl.value = u.profileImageUrl ? resolveImage(u.profileImageUrl) : './assets/logo.png'
   }
 }, { immediate: true })
 
@@ -191,7 +192,7 @@ async function submitProfile() {
       localStorage.setItem('user', JSON.stringify(updatedUser))
       emit('user-updated', updatedUser)
       // Update avatarUrl in case backend changed it elsewhere
-      avatarUrl.value = updatedUser.profileImageUrl ? resolveImage(updatedUser.profileImageUrl) : './assets/logo.svg'
+      avatarUrl.value = updatedUser.profileImageUrl ? resolveImage(updatedUser.profileImageUrl) : './assets/logo.png'
     } catch {/* ignore secondary error */}
     successMessage.value = 'Profile updated successfully'
     showChangePassword.value = false
@@ -290,7 +291,7 @@ async function uploadAvatar(file) {
       const updatedUser = refreshed.data
       localStorage.setItem('user', JSON.stringify(updatedUser))
       emit('user-updated', updatedUser)
-      avatarUrl.value = updatedUser.profileImageUrl ? resolveImage(updatedUser.profileImageUrl) : './assets/logo.svg'
+      avatarUrl.value = updatedUser.profileImageUrl ? resolveImage(updatedUser.profileImageUrl) : './assets/logo.png'
     } catch {/* ignore */}
 
     successMessage.value = 'Profile picture updated'
@@ -315,14 +316,11 @@ function prettyEnum(val) {
 }
 
 function formatPrice(price) {
-  if (price == null) return '$—'
-  const num = typeof price === 'number' ? price : parseFloat(price)
-  if (isNaN(num)) return '$—'
-  return num.toLocaleString(undefined, { style: 'currency', currency: 'USD' })
+  return fmtFt(price)
 }
 
 function resolveImage(path) {
-  if (!path) return './assets/logo.svg'
+  if (!path) return './assets/logo.png'
   if (path.startsWith('http://') || path.startsWith('https://')) return path
   if (path.startsWith('/uploads/')) return path
   if (path.startsWith('uploads/')) return '/' + path

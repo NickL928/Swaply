@@ -50,6 +50,19 @@
   }
 }
 
+/* Force light theme regardless of prefers-color-scheme to avoid black screen */
+:root {
+  --color-background: var(--vt-c-white) !important;
+  --color-background-soft: var(--vt-c-white-soft) !important;
+  --color-background-mute: var(--vt-c-white-mute) !important;
+
+  --color-border: var(--vt-c-divider-light-2) !important;
+  --color-border-hover: var(--vt-c-divider-light-1) !important;
+
+  --color-heading: var(--vt-c-text-light-1) !important;
+  --color-text: var(--vt-c-text-light-1) !important;
+}
+
 *,
 *::before,
 *::after {
@@ -83,4 +96,6 @@ body {
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  background: var(--vt-c-white) !important;
+  color: var(--vt-c-text-light-1) !important;
 }

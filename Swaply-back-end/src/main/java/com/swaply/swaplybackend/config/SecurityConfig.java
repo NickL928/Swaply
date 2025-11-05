@@ -36,6 +36,10 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/auctions/**").permitAll()
                         // Public announcements fetch
                         .requestMatchers(HttpMethod.GET, "/api/announcements/**").permitAll()
+                        // WebSocket handshake endpoint
+                        .requestMatchers("/ws-chat/**").permitAll()
+                        // Chat REST endpoints require auth (any role)
+                        .requestMatchers("/api/chat/**").authenticated()
                         // Admin-only endpoints
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()

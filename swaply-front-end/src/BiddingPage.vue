@@ -40,8 +40,9 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, watch, onBeforeUnmount } from 'vue'
 import auctionApi from './services/auctionApi.js'
+import { fmtFt } from './services/currency.js'
 
 const emit = defineEmits(['navigate'])
 
@@ -57,15 +58,45 @@ const load = async () => {
   finally { loading.value = false }
 }
 
-onMounted(load)
+const refreshInterval = ref(null)
+
+const startAutoRefresh = () => {
+  if (refreshInterval.value) return
+  refreshInterval.value = setInterval(async () => {
+    try {
+      const { data } = await auctionApi.getActive()
+      auctions.value = data || []
+    } catch (e) { /* ignore transient */ }
+  }, 15000)
+}
+
+const ticker = ref(null)
+const tick = () => {
+  // recompute time left by updating a dummy ref
+  _now.value = Date.now()
+}
+const _now = ref(Date.now())
+
+onMounted(() => {
+  load();
+  startAutoRefresh();
+  ticker.value = setInterval(tick, 1000)
+})
+
+onBeforeUnmount(() => {
+  if (refreshInterval.value) { clearInterval(refreshInterval.value); refreshInterval.value = null }
+  if (ticker.value) { clearInterval(ticker.value); ticker.value = null }
+})
 
 const goHome = () => emit('navigate','home')
 const goCreate = () => emit('navigate','create-auction')
 const open = (a) => emit('navigate','auction-detail', { auctionId: a.auctionId })
 
-const money = (v)=> v==null? '$—' : Number(v).toLocaleString(undefined,{style:'currency',currency:'USD'})
-const resolveImage = (p)=>{ if(!p) return './assets/logo.svg'; if(p.startsWith('http')) return p; if(p.startsWith('/uploads/')) return p; if(p.startsWith('uploads/')) return '/' + p; return p }
+const money = (v)=> fmtFt(v)
+const resolveImage = (p)=>{ if(!p) return './assets/logo.png'; if(p.startsWith('http')) return p; if(p.startsWith('/uploads/')) return p; if(p.startsWith('uploads/')) return '/' + p; return p }
 const timeLeft = (end) => {
+  // depend on _now to refresh display each second
+  void _now.value
   if (!end) return '—'
   const endTs = new Date(end).getTime()
   const now = Date.now()

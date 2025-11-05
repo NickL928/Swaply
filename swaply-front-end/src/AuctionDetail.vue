@@ -30,8 +30,9 @@
 </template>
 
 <script setup>
-import { ref, onMounted, watch } from 'vue'
+import { ref, onMounted, watch, onBeforeUnmount } from 'vue'
 import auctionApi from './services/auctionApi.js'
+import { fmtFt } from './services/currency.js'
 
 const props = defineProps({ auctionId: { type: Number, required: true } })
 const emit = defineEmits(['navigate'])
@@ -51,8 +52,23 @@ const load = async () => {
   setMin()
 }
 
-onMounted(load)
+const ended = () => auction.value && new Date(auction.value.endTime).getTime() <= Date.now()
+
+const refreshTimer = ref(null)
+const startDetailAutoRefresh = () => {
+  if (refreshTimer.value) return
+  refreshTimer.value = setInterval(async () => {
+    try {
+      const { data } = await auctionApi.getAuction(props.auctionId)
+      auction.value = data
+    } catch (e) { /* ignore transient */ }
+  }, 15000)
+}
+
+onMounted(() => { load(); startDetailAutoRefresh() })
 watch(()=>props.auctionId, load)
+
+onBeforeUnmount(() => { if (refreshTimer.value) { clearInterval(refreshTimer.value); refreshTimer.value = null } })
 
 const setMin = () => {
   if (!auction.value) return
@@ -77,8 +93,8 @@ const place = async () => {
 
 const back = () => emit('navigate','bidding')
 
-const money = (v)=> v==null? '$—' : Number(v).toLocaleString(undefined,{style:'currency',currency:'USD'})
-const resolveImage = (p)=>{ if(!p) return './assets/logo.svg'; if(p.startsWith('http')) return p; if(p.startsWith('/uploads/')) return p; if(p.startsWith('uploads/')) return '/' + p; return p }
+const money = (v)=> fmtFt(v)
+const resolveImage = (p)=>{ if(!p) return './assets/logo.png'; if(p.startsWith('http')) return p; if(p.startsWith('/uploads/')) return p; if(p.startsWith('uploads/')) return '/' + p; return p }
 const timeLeft = (end) => {
   if (!end) return '—'
   const endTs = new Date(end).getTime()
@@ -95,7 +111,7 @@ const timeLeft = (end) => {
 .loading{ padding:2rem; text-align:center; font-weight:700; color:#64748b }
 
 .card{ max-width:1100px; margin:0 auto; display:grid; grid-template-columns:1fr 1fr; gap:1.25rem; background:#fff; border:1px solid #e5e7eb; border-radius:20px; box-shadow:0 16px 28px rgba(0,0,0,.08); padding:1.25rem }
-.media{ border-radius:16px; overflow:hidden; background:#eef2f7; display:flex; align-items:center; justify-content:center }
+.media{ border-radius:16px; overflow:hidden; background:#eef2f7; display:flex; align-items:center; justify-content:center; height:520px }
 .media img{ width:100%; height:100%; object-fit:cover }
 .meta{ display:flex; flex-direction:column; gap:.6rem }
 .title{ margin:.25rem 0 .5rem; font-size:1.8rem; font-weight:800; color:#0f172a }
@@ -120,5 +136,5 @@ const timeLeft = (end) => {
 .msg.ok{ color:#16a34a }
 .msg.err{ color:#b91c1c }
 
-@media (max-width: 960px){ .card{ grid-template-columns: 1fr } }
+@media (max-width: 960px){ .card{ grid-template-columns: 1fr } .media{ height:360px } }
 </style>

@@ -3,7 +3,7 @@
     <!-- Left side - Branding -->
     <div class="auth-branding">
       <div class="branding-content">
-        <img alt="Swaply logo" class="brand-logo" src="./assets/logo.svg" width="120" height="120" />
+        <img alt="Swaply logo" class="brand-logo" src="./assets/logo.png" width="140" height="140" />
         <h1 class="brand-title">Swaply</h1>
         <p class="brand-subtitle">Your trusted second-hand trading platform</p>
         <div class="brand-features">
@@ -305,6 +305,8 @@ const handleSubmit = async () => {
 .brand-logo {
   margin-bottom: 2rem;
   filter: brightness(0) invert(1);
+  width: 140px;
+  height: 140px;
 }
 
 .brand-title {

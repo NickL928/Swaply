@@ -65,6 +65,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             if (userOptional.isPresent() && jwtUtil.validateToken(jwt, username)) {
                 var user = userOptional.get();
                 String role = jwtUtil.extractRole(jwt);
+                if (role == null || role.isBlank()) role = "ROLE_USER";
                 UserDetails userDetails = User.builder()
                         .username(user.getUserName())
                         .password(user.getPassword())
