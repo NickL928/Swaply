@@ -101,15 +101,74 @@
             </div>
           </div>
         </div>
+
+        <!-- Orders Block -->
+        <div class="card orders-card">
+          <div class="orders-header">
+            <h3>Orders</h3>
+            <div class="tabs">
+              <button :class="{active: ordersTab==='buyer'}" @click="ordersTab='buyer'">My Orders</button>
+              <button :class="{active: ordersTab==='seller'}" @click="ordersTab='seller'">Sales</button>
+            </div>
+          </div>
+
+          <!-- Buyer Orders -->
+          <div v-if="ordersTab==='buyer'">
+            <div v-if="loadingBuyerOrders" class="status">Loading orders...</div>
+            <div v-else-if="buyerOrdersError" class="status error">{{ buyerOrdersError }}</div>
+            <div v-else-if="!buyerOrders.length" class="status empty">You have no orders yet.</div>
+            <div class="orders-list" v-else>
+              <div class="order-row" v-for="o in buyerOrders" :key="o.orderId">
+                <div class="info">
+                  <h4>{{ o.listingTitle }}</h4>
+                  <div class="meta">Order #{{ o.orderId }} • {{ formatDate(o.createdAt) }}</div>
+                </div>
+                <div class="amount">{{ formatPrice(o.totalAmount) }}</div>
+                <div class="status-badge" :class="String(o.status).toLowerCase()">{{ o.status }}</div>
+                <div>
+                  <button v-if="o.status==='COMPLETED' || o.status==='CANCELLED'" class="btn-small danger" @click="deleteOrder(o.orderId, 'buyer')">Delete</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Seller Orders (Sales) -->
+          <div v-else>
+            <div v-if="loadingSellerOrders" class="status">Loading sales...</div>
+            <div v-else-if="sellerOrdersError" class="status error">{{ sellerOrdersError }}</div>
+            <div v-else-if="!sellerOrders.length" class="status empty">You have no sales yet.</div>
+            <div class="orders-list" v-else>
+              <div class="order-row" v-for="o in sellerOrders" :key="o.orderId">
+                <div class="info">
+                  <h4>{{ o.listingTitle }}</h4>
+                  <div class="meta">Order #{{ o.orderId }} • Buyer: {{ o.buyerName }}</div>
+                </div>
+                <div class="amount">{{ formatPrice(o.totalAmount) }}</div>
+                <div class="status-edit">
+                  <select v-model="statusMap[o.orderId]" @change="updateStatus(o.orderId)" :disabled="o.status==='COMPLETED' || o.status==='CANCELLED'">
+                    <option value="PENDING">Pending</option>
+                    <option value="SHIPPED">Shipped</option>
+                    <option value="COMPLETED">Completed</option>
+                    <option value="CANCELLED">Cancelled</option>
+                  </select>
+                </div>
+                <div>
+                  <button v-if="o.status==='COMPLETED' || o.status==='CANCELLED'" class="btn-small danger" @click="deleteOrder(o.orderId, 'seller')">Delete</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </section>
     </main>
   </div>
 </template>
 
 <script setup>
-import { ref, reactive, watch, onMounted } from 'vue'
+import { ref, reactive, watch, onMounted, onBeforeUnmount } from 'vue'
 import userApi from './services/userApi.js'
 import listingApi from './services/listingApi.js'
+import orderApi from './services/orderApi.js'
 import { fmtFt } from './services/currency.js'
 
 const props = defineProps({ user: { type: Object, required: true } })
@@ -130,6 +189,15 @@ const fileInput = ref(null)
 const userListings = ref([])
 const loadingListings = ref(false)
 const listingError = ref('')
+
+const ordersTab = ref('buyer')
+const buyerOrders = ref([])
+const sellerOrders = ref([])
+const loadingBuyerOrders = ref(false)
+const loadingSellerOrders = ref(false)
+const buyerOrdersError = ref('')
+const sellerOrdersError = ref('')
+const statusMap = ref({})
 
 watch(() => props.user, (u) => {
   if (u) {
@@ -158,9 +226,51 @@ async function loadListings() {
   }
 }
 
+async function loadBuyerOrders(){
+  if (!props.user?.userId) return
+  loadingBuyerOrders.value = true; buyerOrdersError.value = ''
+  try { buyerOrders.value = await orderApi.myBuyerOrders() } catch(e){ buyerOrdersError.value = 'Failed to load buyer orders' } finally { loadingBuyerOrders.value = false }
+}
+async function loadSellerOrders(){
+  if (!props.user?.userId) return
+  loadingSellerOrders.value = true; sellerOrdersError.value = ''
+  try {
+    sellerOrders.value = await orderApi.mySellerOrders()
+    statusMap.value = Object.fromEntries((sellerOrders.value||[]).map(o=>[o.orderId, o.status]))
+  } catch(e){ sellerOrdersError.value = 'Failed to load seller orders' } finally { loadingSellerOrders.value = false }
+}
+
+let ordersPollId = null
+function startOrdersPolling(){
+  stopOrdersPolling()
+  ordersPollId = setInterval(()=>{
+    if (ordersTab.value === 'buyer') loadBuyerOrders(); else loadSellerOrders();
+  }, 5000)
+}
+function stopOrdersPolling(){ if (ordersPollId) { clearInterval(ordersPollId); ordersPollId = null } }
+
+watch(ordersTab, ()=>{ startOrdersPolling() })
+
 onMounted(() => {
   loadListings()
+  loadBuyerOrders();
+  loadSellerOrders();
+  startOrdersPolling()
 })
+
+onBeforeUnmount(()=>{ stopOrdersPolling() })
+
+async function updateStatus(orderId){
+  try {
+    const status = statusMap.value[orderId]
+    await orderApi.update(orderId, { status, notes: '' })
+    await loadSellerOrders()
+  } catch(e){
+    console.error('Update order status failed', e)
+    const msg = e?.response?.data || (e?.response?.status === 403 ? 'Only the seller can update the order status. Please switch to the seller account.' : e?.message) || 'Update failed'
+    alert(msg)
+  }
+}
 
 function validatePasswords() {
   if (!showChangePassword.value) return true
@@ -180,6 +290,7 @@ async function submitProfile() {
   if (!validatePasswords()) return
   saving.value = true
   try {
+    const oldName = props.user?.userName
     const payload = { userName: form.userName, email: form.email }
     if (showChangePassword.value && passwords.newPass) {
       payload.password = passwords.newPass
@@ -193,8 +304,12 @@ async function submitProfile() {
       emit('user-updated', updatedUser)
       // Update avatarUrl in case backend changed it elsewhere
       avatarUrl.value = updatedUser.profileImageUrl ? resolveImage(updatedUser.profileImageUrl) : './assets/logo.png'
+      if (oldName && updatedUser.userName && oldName !== updatedUser.userName) {
+        successMessage.value = 'Profile updated. Note: you changed your username—please log out and log back in to refresh your session token.'
+      } else {
+        successMessage.value = 'Profile updated successfully'
+      }
     } catch {/* ignore secondary error */}
-    successMessage.value = 'Profile updated successfully'
     showChangePassword.value = false
     passwords.current = passwords.newPass = passwords.confirm = ''
   } catch (e) {
@@ -305,6 +420,16 @@ async function uploadAvatar(file) {
   }
 }
 
+async function deleteOrder(orderId, role){
+  if(!confirm('Remove this order?')) return
+  try{
+    await orderApi.remove(orderId)
+    if(role==='buyer') await loadBuyerOrders(); else await loadSellerOrders();
+  }catch(e){
+    alert(e?.response?.data || 'Delete failed')
+  }
+}
+
 function truncate(text, max) {
   if (!text) return ''
   return text.length > max ? text.slice(0, max - 1) + '…' : text
@@ -393,21 +518,24 @@ function formatDate(dt) {
 .ops button:hover { background:#4f46e5; }
 .ops .danger { background:#ef4444; }
 .ops .danger:hover { background:#dc2626; }
-
-@media (max-width: 1100px) {
-  .content { flex-direction:column; }
-  .profile-panel { width:100%; flex-direction:row; align-items:stretch; }
-  .profile-panel .card { flex:1; }
-  .listings-panel { width:100%; }
-}
-@media (max-width: 800px) {
-  .profile-panel { flex-direction:column; }
-  .listing-row { grid-template-columns:60px 1fr 80px 90px; }
-}
-@media (max-width: 560px) {
-  .listing-row { grid-template-columns:60px 1fr 70px; }
-  .ops { display:none; }
-}
+.orders-card { margin-top: 1rem; display:flex; flex-direction:column; gap:1rem; }
+.orders-header { display:flex; align-items:center; justify-content:space-between; }
+.tabs { display:flex; gap:.5rem; }
+.tabs button{ background:#fff; border:1px solid #e2e8f0; padding:.45rem .9rem; border-radius:10px; font-weight:700; color:#334155; cursor:pointer; }
+.tabs button.active{ background:#eef2ff; border-color:#818cf8; color:#312e81; }
+.orders-list { display:flex; flex-direction:column; gap:.8rem; }
+.order-row { display:grid; grid-template-columns: 1fr 120px 160px; align-items:center; gap:1rem; padding:.9rem 1rem; border:1px solid #e2e8f0; border-radius:14px; background:#f8fafc; }
+.order-row .info h4 { margin:0 0 .35rem; font-size:.95rem; }
+.order-row .meta { margin:0; font-size:.75rem; color:#64748b; }
+.order-row .amount { font-weight:800; color:#0f172a; }
+.status-badge { font-weight:800; text-transform:uppercase; font-size:.7rem; letter-spacing:.4px; padding:.3rem .6rem; border-radius:999px; text-align:center; }
+.status-badge.pending { background:#fff7ed; color:#7c2d12; }
+.status-badge.shipped { background:#e0f2fe; color:#075985; }
+.status-badge.completed { background:#ecfdf5; color:#065f46; }
+.status-badge.cancelled { background:#fee2e2; color:#991b1b; }
+.status-edit select { padding:.35rem .55rem; border:1px solid #e2e8f0; border-radius:8px; }
 .fade-enter-active, .fade-leave-active { transition: opacity .25s; }
 .fade-enter-from, .fade-leave-to { opacity:0; }
+.btn-small{ padding:.35rem .6rem; border:none; border-radius:8px; font-weight:800; cursor:pointer; }
+.btn-small.danger{ background:#ef4444; color:#fff; }
 </style>

@@ -12,6 +12,9 @@
         <a href="#" class="nav-link" :class="{active: active==='announcements'}" @click.prevent="go('announcements')">System Announcements</a>
       </nav>
       <div class="header-actions">
+        <button class="pill-btn" @click="go('cart')">
+          🛒 <span class="count" v-if="cartCount>0">{{ cartCount }}</span>
+        </button>
         <button class="pill-btn" @click="openChat">💬 DM</button>
         <img :src="avatar" alt="me" class="avatar" @click="go('profile')" />
         <button class="pill-btn" @click="$emit('logout')">Logout</button>
@@ -21,11 +24,23 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { computed, onMounted, onBeforeUnmount, ref } from 'vue'
+import cartApi from '../services/cartApi.js'
 const props = defineProps({ active: { type: String, default: '' } })
 const emit = defineEmits(['navigate','logout'])
 const go = (page) => emit('navigate', page)
 const openChat = () => window.dispatchEvent(new Event('open-chat'))
+
+// Cart badge only
+const cartCount = ref(0)
+const refreshCart = async ()=>{
+  try { const { data } = await cartApi.getCart(); cartCount.value = (data||[]).reduce((s,i)=>s+(i.quantity||0),0) } catch {}
+}
+const onCartUpdated = () => refreshCart()
+
+onMounted(()=>{ refreshCart(); window.addEventListener('cart-updated', onCartUpdated) })
+onBeforeUnmount(()=> window.removeEventListener('cart-updated', onCartUpdated))
+
 const avatar = computed(() => {
   try {
     const u = JSON.parse(localStorage.getItem('user'))
@@ -54,5 +69,6 @@ const avatar = computed(() => {
 .nav-link:hover, .nav-link.active { color:#fff; background:rgba(255,255,255,0.2); }
 .header-actions { display:flex; align-items:center; gap:.5rem; }
 .pill-btn { background:rgba(255,255,255,0.2); color:#fff; border:2px solid rgba(255,255,255,0.3); padding:.5rem .9rem; border-radius:12px; font-weight:700; cursor:pointer; }
+.pill-btn .count{ background:#22c55e; color:#052e16; padding:.1rem .35rem; border-radius:999px; font-size:.75rem; font-weight:800; margin-left:.35rem; }
 .avatar { width:32px; height:32px; border-radius:50%; border:2px solid rgba(255,255,255,0.5); background:#fff; object-fit:cover; }
 </style>

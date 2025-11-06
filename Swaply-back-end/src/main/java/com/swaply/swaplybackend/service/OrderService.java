@@ -17,6 +17,7 @@ import com.swaply.swaplybackend.repository.CartItemRepository;
 import com.swaply.swaplybackend.dto.CheckoutResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -96,13 +97,29 @@ public class OrderService implements IOrderService {
     }
 
     @Override
+    @Transactional
     public OrderDto updateOrder(Long orderId, UpdateOrderDto updateOrderDto) {
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new InvaldOrderException("Order not found with id: " + orderId));
 
-        order.setStatus(updateOrderDto.getStatus());
+        // Disallow updates once finalized
+        if (order.getStatus() == OrderStatus.COMPLETED || order.getStatus() == OrderStatus.CANCELLED) {
+            throw new InvaldOrderException("Order is finalized and cannot be updated");
+        }
+
+        OrderStatus newStatus = updateOrderDto.getStatus();
+        order.setStatus(newStatus);
         order.setNotes(updateOrderDto.getNotes());
         order.setUpdatedAt(LocalDateTime.now());
+
+        // Mark listing as SOLD when completed; keep listing as-is on cancelled
+        if (newStatus == OrderStatus.COMPLETED) {
+            Listing listing = order.getListing();
+            if (listing != null && listing.getStatus() != ListingStatus.SOLD) {
+                listing.setStatus(ListingStatus.SOLD);
+                listingRepository.save(listing);
+            }
+        }
 
         Order savedOrder = orderRepository.save(order);
         return convertToDto(savedOrder);
@@ -117,6 +134,7 @@ public class OrderService implements IOrderService {
         orderRepository.deleteById(orderId);
     }
 
+    @Transactional
     public CheckoutResponse createOrdersFromCart(User buyer) {
         var cartItems = cartItemRepository.findByUser(buyer);
         if (cartItems.isEmpty()) {

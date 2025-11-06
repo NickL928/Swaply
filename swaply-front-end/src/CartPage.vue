@@ -57,7 +57,8 @@
         <div v-if="checkoutInfo" class="checkout-result">
           <p>Created {{ checkoutInfo.ordersCreated }} order(s). Total: {{ money(checkoutInfo.grandTotal) }}</p>
           <p>Order IDs: {{ checkoutInfo.orderIds.join(', ') }}</p>
-          <button class="btn secondary" @click="goHome">Back to Home</button>
+          <button class="btn secondary" @click="goToProfileOrders">View Orders</button>
+          <button class="btn back" @click="goHome">Back to Home</button>
         </div>
       </div>
     </div>
@@ -130,6 +131,17 @@ const checkout = async () => {
     items.value = []
     window.dispatchEvent(new Event('cart-updated'))
   } catch (e) {
+    // Recovery: if backend created orders but returned error, cart may already be cleared
+    try {
+      const { data } = await cartApi.getCart()
+      if (!data || !data.length) {
+        checkoutInfo.value = { ordersCreated: 'N/A', grandTotal: grandTotal.value, orderIds: [], itemsCount: 0 }
+        items.value = []
+        window.dispatchEvent(new Event('cart-updated'))
+        errorMessage.value = ''
+        return
+      }
+    } catch {}
     errorMessage.value = e.response?.data?.message || 'Checkout failed'
   } finally { checking.value = false }
 }

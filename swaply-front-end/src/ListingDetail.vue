@@ -27,10 +27,6 @@
         </div>
 
         <div class="actions">
-          <label class="qty">
-            Qty
-            <input type="number" v-model.number="qty" min="1" />
-          </label>
           <button class="btn primary" @click="add" :disabled="adding || isOwnListing">
             {{ isOwnListing ? 'Your listing' : (adding ? 'Adding...' : 'Add to Cart') }}
           </button>
@@ -53,7 +49,6 @@ import { fmtFt } from './services/currency.js'
 const props = defineProps({ listingId: { type: Number, required: true } })
 const emit = defineEmits(['navigate'])
 const listing = ref(null)
-const qty = ref(1)
 const adding = ref(false)
 const msg = ref('')
 
@@ -80,7 +75,7 @@ const add = async () => {
   if (isOwnListing.value) return
   try {
     adding.value = true
-    await cartApi.addToCart(listing.value.listingId, qty.value)
+    await cartApi.addToCart(listing.value.listingId, 1)
     window.dispatchEvent(new Event('cart-updated'))
     msg.value = 'Added to cart'
     setTimeout(()=> msg.value='', 2000)
@@ -190,10 +185,6 @@ const resolveImage = (path)=>{
 }
 
 .actions { display: flex; gap: 1rem; align-items: center; flex-wrap: wrap; margin-top: .5rem; }
-.qty { display: flex; align-items: center; gap: .5rem; color: #374151; font-weight: 700; }
-.qty input { width: 80px; padding: .6rem .65rem; border: 2px solid #e5e7eb; border-radius: 12px; font-weight: 700; }
-.qty input:focus { outline: none; border-color: #4f46e5; box-shadow: 0 0 0 4px rgba(79,70,229,.12); }
-
 .btn { cursor: pointer; border: none; border-radius: 14px; font-weight: 800; padding: .9rem 1.4rem; transition: all .25s; }
 .btn.primary { background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%); color: #fff; box-shadow: 0 8px 20px rgba(79,70,229,.25); }
 .btn.primary:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 12px 26px rgba(79,70,229,.35); }
