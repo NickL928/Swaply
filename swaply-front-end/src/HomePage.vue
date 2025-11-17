@@ -130,6 +130,10 @@ async function refreshCartCount() {
 }
 
 const handleCartUpdated = () => refreshCartCount()
+const handleOrdersUpdated = () => {
+  // re-fetch active listings after checkout/order changes
+  fetchListings()
+}
 
 const fetchListings = async () => {
   loading.value = true
@@ -149,10 +153,12 @@ onMounted(() => {
   fetchListings()
   refreshCartCount()
   window.addEventListener('cart-updated', handleCartUpdated)
+  window.addEventListener('orders-updated', handleOrdersUpdated)
 })
 
 onBeforeUnmount(() => {
   window.removeEventListener('cart-updated', handleCartUpdated)
+  window.removeEventListener('orders-updated', handleOrdersUpdated)
 })
 
 const categoryFilter = computed(() => activeFilter.value === 'category' ? categoryCycle[categoryIndex.value] : null)

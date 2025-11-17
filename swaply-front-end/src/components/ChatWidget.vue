@@ -1,8 +1,5 @@
 <template>
   <div class="chat-widget">
-    <!-- Removed floating toggle button; DM opens from header button -->
-
-    <!-- Modal popup teleported to body when open -->
     <teleport to="body">
       <div v-if="modelOpen" class="overlay" @click.self="emitClose">
         <div class="panel modal">
@@ -103,6 +100,7 @@ const unreadCount = computed(() => Object.values(unread.value).reduce((a,b)=>a+b
 
 let stomp = null
 let sub = null
+let connecting = false
 
 async function loadUsers(){
   try {
@@ -128,10 +126,12 @@ async function loadConversations(){
 function connect(){
   // establish (or reuse) a single app-wide connection
   if (stomp && stomp.connected) return
+  if (connecting) return
   const token = localStorage.getItem('token')
   if (!token || !meId) return // don't attempt without auth context
   const url = (props.baseUrl || '') + '/ws-chat' + ('?token=' + encodeURIComponent(token))
   const socketFactory = () => new SockJS(url)
+  connecting = true
   try {
     stomp = new StompClient({
       connectHeaders: { Authorization: 'Bearer ' + token },
@@ -141,14 +141,20 @@ function connect(){
       heartbeatIncoming: 10000,
       heartbeatOutgoing: 10000,
       onConnect: () => {
+        // ensure only have one active subscription
+        try { if (sub) sub.unsubscribe() } catch {}
         const destination = `/user/queue/messages`
-        try { sub = stomp.subscribe(destination, onMessage) } catch (e) { console.error('subscribe failed', e) }
+        try {
+          sub = stomp.subscribe(destination, onMessage)
+          console.log('[chat] subscribed to', destination)
+        } catch (e) { console.error('subscribe failed', e) }
+        connecting = false
       },
-      onStompError: (frame) => { console.error('STOMP error', frame.body) },
-      onWebSocketClose: () => { /* auto-retry handled by reconnectDelay */ }
+      onStompError: (frame) => { console.error('STOMP error', frame.body); connecting = false },
+      onWebSocketClose: () => { connecting = false /* auto-retry handled by reconnectDelay */ }
     })
     stomp.activate()
-  } catch (e) { console.error('stomp init failed', e) }
+  } catch (e) { console.error('stomp init failed', e); connecting = false }
 }
 
 function promotePeer(peerId, incoming){
@@ -182,40 +188,56 @@ function restoreState(){
     const map = {}
     for (const conv of conversations.value) map[conv.peerId] = conv.unreadCount || 0
     unread.value = map
+    // notify header of unread total on load
+    emitUnreadTotal()
   } catch {}
 }
 
+function emitUnreadTotal(){
+  const total = Object.values(unread.value).reduce((a,b)=>a+b,0)
+  window.dispatchEvent(new CustomEvent('chat-unread-changed', { detail: { total } }))
+}
+
 // persist when conversations or messages change
-watch(conversations, persistState, { deep: true })
+watch(conversations, () => { persistState(); emitUnreadTotal() }, { deep: true })
 watch(messages, persistState, { deep: true })
 
 function onMessage(msg){
   try {
     const m = JSON.parse(msg.body)
+    console.log('[chat] incoming message', m)
     const peerId = m.fromUserId === meId ? m.toUserId : m.fromUserId
     if (!messages.value[peerId]) messages.value[peerId] = []
     messages.value[peerId].push(m)
 
-    // update conversation preview
+    // ensure peer visible in list and promoted to top; mark unread if incoming
     promotePeer(peerId, m.fromUserId !== meId)
     const c = conversations.value.find(x => x.peerId === peerId)
     if (c) { c.lastContent = m.content; c.lastTimestamp = m.timestamp }
 
-    if (activeUserId.value !== peerId) unread.value[peerId] = (unread.value[peerId]||0) + 1
+    if (m.fromUserId !== meId) {
+      if (!(activeUserId.value === peerId && modelOpen.value)) {
+        unread.value[peerId] = (unread.value[peerId]||0) + 1
+        emitUnreadTotal()
+      }
+    }
     nextTick(()=>{ if(messagesBox.value) messagesBox.value.scrollTop = messagesBox.value.scrollHeight })
   } catch (e) { console.error('ws message parse error', e) }
 }
 
 function disconnect(){
   try { if (sub) sub.unsubscribe() } catch{}
+  sub = null
   try { if (stomp) stomp.deactivate() } catch{}
-  sub = null; stomp = null
+  stomp = null
+  connecting = false
 }
 
 function openConversation(c){
   activeUserId.value = c.peerId
   unread.value[c.peerId] = 0
   c.unreadCount = 0
+  emitUnreadTotal()
   chatApi.markRead(meId, c.peerId).catch(()=>{})
   ensureThreadLoaded(c.peerId)
   nextTick(()=>{ if(messagesBox.value) messagesBox.value.scrollTop = messagesBox.value.scrollHeight })
@@ -225,6 +247,7 @@ function openChat(u){
   // manual search selection
   activeUserId.value = u.userId
   unread.value[u.userId] = 0
+  emitUnreadTotal()
   ensureThreadLoaded(u.userId)
   nextTick(()=>{ if(messagesBox.value) messagesBox.value.scrollTop = messagesBox.value.scrollHeight })
 }
@@ -242,23 +265,33 @@ function send(){
   if (!content || !activeUserId.value) return
   const payload = { fromUserId: meId, toUserId: activeUserId.value, content }
 
+  console.log('[chat] send() called', { via: (stomp && stomp.connected) ? 'ws' : 'rest', payload })
+
   if (stomp && stomp.connected) {
-    try { stomp.publish({ destination: '/app/chat.private', body: JSON.stringify(payload) }) } catch{}
-    // Do NOT optimistic-push here to avoid duplicate when server echoes back
+    try {
+      stomp.publish({ destination: '/app/chat.private', body: JSON.stringify(payload) })
+    } catch (e) {
+      console.error('[chat] ws publish failed, falling back to rest', e)
+      sendViaRestFallback(payload)
+    }
   } else {
-    // Fallback to REST: push only the server response to avoid duplicates
-    chatApi.send(payload).then(({ data }) => {
-      const peerId = payload.toUserId
-      if (!messages.value[peerId]) messages.value[peerId] = []
-      messages.value[peerId].push(data)
-      const c = conversations.value.find(x => x.peerId === peerId)
-      if (c) { c.lastContent = data.content; c.lastTimestamp = data.timestamp; promotePeer(peerId, false) }
-      nextTick(()=>{ if(messagesBox.value) messagesBox.value.scrollTop = messagesBox.value.scrollHeight })
-    }).catch(e=>console.error('send rest failed', e))
+    sendViaRestFallback(payload)
   }
 
   draft.value = ''
   nextTick(()=>{ if(messagesBox.value) messagesBox.value.scrollTop = messagesBox.value.scrollHeight })
+}
+
+function sendViaRestFallback(payload) {
+  chatApi.send(payload).then(({ data }) => {
+    console.log('[chat] rest send response', data)
+    const peerId = payload.toUserId
+    if (!messages.value[peerId]) messages.value[peerId] = []
+    messages.value[peerId].push(data)
+    const c = conversations.value.find(x => x.peerId === peerId)
+    if (c) { c.lastContent = data.content; c.lastTimestamp = data.timestamp; promotePeer(peerId, false) }
+    nextTick(()=>{ if(messagesBox.value) messagesBox.value.scrollTop = messagesBox.value.scrollHeight })
+  }).catch(e=>console.error('send rest failed', e))
 }
 
 function resolveImage(path){

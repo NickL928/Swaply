@@ -130,6 +130,8 @@ const checkout = async () => {
     checkoutInfo.value = data
     items.value = []
     window.dispatchEvent(new Event('cart-updated'))
+    // notify other pages (e.g., Home) that orders/listings changed so they can refresh
+    window.dispatchEvent(new Event('orders-updated'))
   } catch (e) {
     // Recovery: if backend created orders but returned error, cart may already be cleared
     try {
@@ -138,6 +140,7 @@ const checkout = async () => {
         checkoutInfo.value = { ordersCreated: 'N/A', grandTotal: grandTotal.value, orderIds: [], itemsCount: 0 }
         items.value = []
         window.dispatchEvent(new Event('cart-updated'))
+        window.dispatchEvent(new Event('orders-updated'))
         errorMessage.value = ''
         return
       }

@@ -15,7 +15,10 @@
         <button class="pill-btn" @click="go('cart')">
           🛒 <span class="count" v-if="cartCount>0">{{ cartCount }}</span>
         </button>
-        <button class="pill-btn" @click="openChat">💬 DM</button>
+        <button class="pill-btn" @click="openChat">
+          💬 DM
+          <span v-if="chatUnread>0" class="dot">{{ chatUnread }}</span>
+        </button>
         <img :src="avatar" alt="me" class="avatar" @click="go('profile')" />
         <button class="pill-btn" @click="$emit('logout')">Logout</button>
       </div>
@@ -38,8 +41,23 @@ const refreshCart = async ()=>{
 }
 const onCartUpdated = () => refreshCart()
 
-onMounted(()=>{ refreshCart(); window.addEventListener('cart-updated', onCartUpdated) })
-onBeforeUnmount(()=> window.removeEventListener('cart-updated', onCartUpdated))
+// Chat unread badge
+const chatUnread = ref(0)
+const onChatUnreadChanged = (e) => {
+  const total = e?.detail?.total ?? 0
+  chatUnread.value = total
+}
+
+onMounted(()=>{
+  refreshCart()
+  window.addEventListener('cart-updated', onCartUpdated)
+  window.addEventListener('chat-unread-changed', onChatUnreadChanged)
+})
+
+onBeforeUnmount(()=>{
+  window.removeEventListener('cart-updated', onCartUpdated)
+  window.removeEventListener('chat-unread-changed', onChatUnreadChanged)
+})
 
 const avatar = computed(() => {
   try {
@@ -68,7 +86,8 @@ const avatar = computed(() => {
 .nav-link { text-decoration:none; color:rgba(255,255,255,0.9); font-weight:600; padding:.5rem 1rem; border-radius:12px; transition:all .2s ease; }
 .nav-link:hover, .nav-link.active { color:#fff; background:rgba(255,255,255,0.2); }
 .header-actions { display:flex; align-items:center; gap:.5rem; }
-.pill-btn { background:rgba(255,255,255,0.2); color:#fff; border:2px solid rgba(255,255,255,0.3); padding:.5rem .9rem; border-radius:12px; font-weight:700; cursor:pointer; }
+.pill-btn { background:rgba(255,255,255,0.2); color:#fff; border:2px solid rgba(255,255,255,0.3); padding:.5rem .9rem; border-radius:12px; font-weight:700; cursor:pointer; position:relative; }
 .pill-btn .count{ background:#22c55e; color:#052e16; padding:.1rem .35rem; border-radius:999px; font-size:.75rem; font-weight:800; margin-left:.35rem; }
+.dot{ background:#ef4444; color:#fff; border-radius:999px; padding:.05rem .4rem; font-size:.7rem; font-weight:800; margin-left:.35rem; min-width:1.2rem; text-align:center; }
 .avatar { width:32px; height:32px; border-radius:50%; border:2px solid rgba(255,255,255,0.5); background:#fff; object-fit:cover; }
 </style>
