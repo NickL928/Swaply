@@ -10,5 +10,5 @@ import java.util.Optional;
 public interface BidRepository extends JpaRepository<Bid, Long> {
     List<Bid> findByAuctionOrderByAmountDescCreatedDateDesc(Auction auction);
     Optional<Bid> findTopByAuctionOrderByAmountDescCreatedDateDesc(Auction auction);
+    void deleteByAuction(Auction auction);
 }
-

@@ -10,6 +10,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 @RestController
@@ -75,6 +76,35 @@ public class ListingController {
         try {
             List<ListingDto> listings = listingService.searchListings(keyword);
             return new ResponseEntity<>(listings, HttpStatus.OK);
+        } catch (Exception e) {
+            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    @GetMapping("/latest")
+    public ResponseEntity<List<ListingDto>> getLatestListings(@RequestParam(defaultValue = "20") int limit) {
+        try {
+            return new ResponseEntity<>(listingService.getLatestListings(limit), HttpStatus.OK);
+        } catch (Exception e) {
+            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    @GetMapping("/popular")
+    public ResponseEntity<List<ListingDto>> getPopularListings(@RequestParam(defaultValue = "20") int limit) {
+        try {
+            return new ResponseEntity<>(listingService.getPopularListings(limit), HttpStatus.OK);
+        } catch (Exception e) {
+            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    @GetMapping("/price-range")
+    public ResponseEntity<List<ListingDto>> getByPriceRange(@RequestParam BigDecimal min,
+                                                            @RequestParam BigDecimal max,
+                                                            @RequestParam(defaultValue = "50") int limit) {
+        try {
+            return new ResponseEntity<>(listingService.getListingsByPriceRange(min, max, limit), HttpStatus.OK);
         } catch (Exception e) {
             return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
         }

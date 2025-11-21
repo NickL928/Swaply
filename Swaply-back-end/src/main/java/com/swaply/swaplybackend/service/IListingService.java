@@ -5,6 +5,7 @@ import com.swaply.swaplybackend.dto.ListingDto;
 import com.swaply.swaplybackend.dto.UpdateListingDto;
 import com.swaply.swaplybackend.enums.Category;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 public interface IListingService {
@@ -26,5 +27,11 @@ public interface IListingService {
     void deleteListing(Long listingId, Long userId);
 
     void markAsSold(Long listingId, Long userId);
+
+    List<ListingDto> getLatestListings(int limit);
+
+    List<ListingDto> getPopularListings(int limit);
+
+    List<ListingDto> getListingsByPriceRange(BigDecimal min, BigDecimal max, int limit);
 
 }

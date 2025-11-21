@@ -1,6 +1,12 @@
 <template>
   <div class="post-item-container">
-    <!-- Top bar removed per request -->
+    <!-- Hero Section -->
+    <section class="hero-section">
+      <div class="hero-content">
+        <h1 class="hero-title">📦 Sell Your Item</h1>
+        <p class="hero-subtitle">List your item and reach thousands of buyers</p>
+      </div>
+    </section>
 
     <!-- Main Content -->
     <main class="main-content">
@@ -242,22 +248,53 @@ const goToHome = () => {
 .post-item-container {
   min-height: 100vh;
   width: 100%;
-  background: #f8fafc;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background-attachment: fixed;
   margin: 0;
   padding: 0;
   box-sizing: border-box;
 }
 
+/* Hero Section */
+.hero-section {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding: 3rem 2rem;
+  text-align: center;
+}
+
+.hero-content {
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.hero-title {
+  font-size: 2.5rem;
+  font-weight: 800;
+  color: white;
+  margin: 0 0 0.5rem 0;
+  text-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.hero-subtitle {
+  font-size: 1.1rem;
+  color: rgba(255, 255, 255, 0.95);
+  margin: 0;
+}
 
 /* Main Content */
 .main-content {
   width: 100%;
   max-width: none;
   margin: 0;
-  padding: 2.5rem 2rem;
+  padding: 3rem 2rem 4rem 2rem;
   box-sizing: border-box;
   display: flex;
   justify-content: center;
+  background: #f8fafc;
+  border-radius: 32px 32px 0 0;
+  margin-top: -2rem;
+  position: relative;
+  z-index: 2;
 }
 
 .post-form-container {
@@ -267,16 +304,19 @@ const goToHome = () => {
 
 .post-form-card {
   background: white;
-  border-radius: 24px;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+  border-radius: 20px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
   padding: 3rem;
-  border: 1px solid #e5e7eb;
+  border: 1px solid #e2e8f0;
 }
 
 .form-title {
-  font-size: 2.5rem;
+  font-size: 2rem;
   font-weight: 700;
-  color: #1f2937;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
   text-align: center;
   margin-bottom: 2.5rem;
 }
@@ -284,55 +324,57 @@ const goToHome = () => {
 .post-form {
   display: flex;
   flex-direction: column;
-  gap: 2rem;
+  gap: 1.5rem;
 }
 
 .form-group {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: 0.5rem;
 }
 
 .form-label {
   font-weight: 600;
-  color: #374151;
-  font-size: 1.1rem;
+  color: #475569;
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
 .form-input,
 .form-select {
-  padding: 1.25rem 1.5rem;
-  border: 2px solid #e5e7eb;
-  border-radius: 16px;
-  font-size: 1.1rem;
-  transition: all 0.3s;
-  background: #f8fafc;
+  padding: 0.875rem 1rem;
+  border: 2px solid #e2e8f0;
+  border-radius: 12px;
+  font-size: 1rem;
+  transition: all 0.3s ease;
+  background: white;
 }
 
 .form-input:focus,
 .form-select:focus {
   outline: none;
-  border-color: #4f46e5;
-  box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.1);
-  background: white;
+  border-color: #667eea;
+  box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+  transform: translateY(-1px);
 }
 
 .form-textarea {
-  padding: 1.25rem 1.5rem;
-  border: 2px solid #e5e7eb;
-  border-radius: 16px;
-  font-size: 1.1rem;
-  transition: all 0.3s;
-  background: #f8fafc;
+  padding: 0.875rem 1rem;
+  border: 2px solid #e2e8f0;
+  border-radius: 12px;
+  font-size: 1rem;
+  transition: all 0.3s ease;
+  background: white;
   resize: vertical;
   font-family: inherit;
 }
 
 .form-textarea:focus {
   outline: none;
-  border-color: #4f46e5;
-  box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.1);
-  background: white;
+  border-color: #667eea;
+  box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+  transform: translateY(-1px);
 }
 
 /* Picture Upload */
@@ -411,45 +453,46 @@ const goToHome = () => {
 /* Form Actions */
 .form-actions {
   display: flex;
-  gap: 1.5rem;
-  margin-top: 1rem;
+  gap: 1rem;
+  margin-top: 1.5rem;
 }
 
 .cancel-button {
   flex: 1;
-  padding: 1.5rem;
-  border: 2px solid #e5e7eb;
+  padding: 1rem 2rem;
+  border: 2px solid #e2e8f0;
   background: white;
-  color: #6b7280;
-  border-radius: 16px;
-  font-size: 1.2rem;
+  color: #64748b;
+  border-radius: 12px;
+  font-size: 1rem;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.3s;
+  transition: all 0.3s ease;
 }
 
 .cancel-button:hover {
-  border-color: #d1d5db;
-  color: #374151;
+  background: #f8fafc;
+  border-color: #cbd5e1;
+  transform: translateY(-1px);
 }
 
 .submit-button {
   flex: 1;
-  background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+  padding: 1rem 2rem;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
   border: none;
-  padding: 1.5rem;
-  border-radius: 16px;
-  font-size: 1.2rem;
-  font-weight: 600;
+  border-radius: 12px;
+  font-size: 1rem;
+  font-weight: 700;
   cursor: pointer;
-  transition: all 0.3s;
-  box-shadow: 0 8px 20px rgba(79, 70, 229, 0.3);
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
 }
 
 .submit-button:hover:not(:disabled) {
   transform: translateY(-2px);
-  box-shadow: 0 12px 25px rgba(79, 70, 229, 0.4);
+  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
 }
 
 .submit-button:disabled {
@@ -458,7 +501,7 @@ const goToHome = () => {
   transform: none;
 }
 
-/* Mobile Responsiveness */
+/* Responsive */
 @media (max-width: 1024px) {
   .nav-menu {
     display: none;

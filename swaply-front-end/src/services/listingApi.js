@@ -25,11 +25,26 @@ export default {
   getActiveListings() {
     return client.get('/active');
   },
+  getLatestListings(limit = 20) {
+    return client.get('/latest', { params: { limit } });
+  },
+  getPopularListings(limit = 20) {
+    return client.get('/popular', { params: { limit } });
+  },
+  getListingsByPriceRange(min, max, limit = 50) {
+    return client.get('/price-range', { params: { min, max, limit } });
+  },
   getListing(id) {
     return client.get('/' + id);
   },
   createListing(userId, payload) {
     return client.post(`/user/${userId}`, payload, { headers: { 'Content-Type': 'application/json', ...authHeader() } });
+  },
+  updateListing(listingId, payload) {
+    return client.put('/' + listingId, payload, { headers: { 'Content-Type': 'application/json', ...authHeader() } });
+  },
+  deleteListingForUser(listingId, userId) {
+    return client.delete(`/${listingId}/user/${userId}`, { headers: authHeader() });
   },
   uploadImage(file) {
     const formData = new FormData();

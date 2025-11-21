@@ -11,8 +11,10 @@ import com.swaply.swaplybackend.exception.InvalidListingException;
 import com.swaply.swaplybackend.exception.ListingNotFoundException;
 import com.swaply.swaplybackend.repository.ListingRepository;
 import com.swaply.swaplybackend.repository.UserRepository;
+import com.swaply.swaplybackend.service.listing.ListingCacheService;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -22,10 +24,12 @@ public class ListingService implements IListingService {
 
     private final ListingRepository listingRepository;
     private final UserRepository userRepository;
+    private final ListingCacheService listingCacheService;
 
-    public ListingService(ListingRepository listingRepository, UserRepository userRepository) {
+    public ListingService(ListingRepository listingRepository, UserRepository userRepository, ListingCacheService listingCacheService) {
         this.listingRepository = listingRepository;
         this.userRepository = userRepository;
+        this.listingCacheService = listingCacheService;
     }
 
     @Override
@@ -48,6 +52,7 @@ public class ListingService implements IListingService {
         listing.setUpdatedDate(LocalDateTime.now());
 
         Listing savedListing = listingRepository.save(listing);
+        listingCacheService.upsert(savedListing);
         return convertToDto(savedListing);
     }
 
@@ -62,10 +67,7 @@ public class ListingService implements IListingService {
 
     @Override
     public List<ListingDto> getAllActiveListings() {
-        List<Listing> activeListings = listingRepository.findByStatusOrderByCreatedDateDesc(ListingStatus.ACTIVE);
-        return activeListings.stream()
-                .map(this::convertToDto)
-                .collect(Collectors.toList());
+        return listingCacheService.latest(100);
     }
 
     @Override
@@ -127,6 +129,7 @@ public class ListingService implements IListingService {
 
         listing.setUpdatedDate(LocalDateTime.now());
         Listing updatedListing = listingRepository.save(listing);
+        listingCacheService.upsert(listing);
         return convertToDto(updatedListing);
     }
 
@@ -144,6 +147,7 @@ public class ListingService implements IListingService {
         listing.setStatus(ListingStatus.DELETED);
         listing.setUpdatedDate(LocalDateTime.now());
         listingRepository.save(listing);
+        listingCacheService.evict(listingId);
     }
 
     @Override
@@ -162,6 +166,19 @@ public class ListingService implements IListingService {
         listing.setStatus(ListingStatus.SOLD);
         listing.setUpdatedDate(LocalDateTime.now());
         listingRepository.save(listing);
+        listingCacheService.upsert(listing);
+    }
+
+    public List<ListingDto> getLatestListings(int limit) {
+        return listingCacheService.latest(limit);
+    }
+
+    public List<ListingDto> getPopularListings(int limit) {
+        return listingCacheService.popular(limit);
+    }
+
+    public List<ListingDto> getListingsByPriceRange(BigDecimal min, BigDecimal max, int limit) {
+        return listingCacheService.priceRange(min, max, limit);
     }
 
     // entity to DTO conversion

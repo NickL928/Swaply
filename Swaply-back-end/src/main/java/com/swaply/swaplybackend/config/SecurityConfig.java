@@ -40,6 +40,9 @@ public class SecurityConfig {
                         .requestMatchers("/ws-chat/**").permitAll()
                         // Chat REST endpoints require auth (any role)
                         .requestMatchers("/api/chat/**").authenticated()
+                        .requestMatchers(HttpMethod.DELETE, "/api/cart/**").authenticated()
+                        .requestMatchers(HttpMethod.GET, "/api/cart/**").authenticated()
+                        .requestMatchers(HttpMethod.POST, "/api/cart/**").authenticated()
                         // Admin-only endpoints
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()

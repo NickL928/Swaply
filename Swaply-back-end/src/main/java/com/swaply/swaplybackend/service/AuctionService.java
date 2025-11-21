@@ -50,10 +50,19 @@ public class AuctionService implements IAuctionService {
         if (listing.getStatus() != ListingStatus.ACTIVE) {
             throw new InvalidListingException("Listing must be ACTIVE to create auction");
         }
+
+        // Check for existing auction
         Optional<Auction> existing = auctionRepository.findByListing_ListingId(listing.getListingId());
-        if (existing.isPresent() && existing.get().getStatus() == AuctionStatus.ACTIVE) {
-            throw new InvalidListingException("Auction already exists for this listing");
+        if (existing.isPresent()) {
+            Auction existingAuction = existing.get();
+            if (existingAuction.getStatus() == AuctionStatus.ACTIVE) {
+                throw new InvalidListingException("An active auction already exists for this listing");
+            }
+            bidRepository.deleteByAuction(existingAuction);
+            auctionRepository.delete(existingAuction);
+            auctionRepository.flush(); // Force deletion to database immediately
         }
+
         if (request.getStartingPrice() == null || request.getMinIncrement() == null || request.getEndTime() == null) {
             throw new InvalidListingException("startingPrice, minIncrement, endTime are required");
         }

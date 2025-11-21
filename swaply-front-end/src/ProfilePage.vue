@@ -95,12 +95,37 @@
               </div>
               <div class="price">{{ formatPrice(l.price) }}</div>
               <div class="ops">
-                <button @click="editListing(l)">Edit</button>
+                <button @click="openEditListing(l)">Edit</button>
                 <button class="danger" @click="deleteListing(l)">Delete</button>
               </div>
             </div>
           </div>
         </div>
+
+        <!-- Edit Listing Modal -->
+        <transition name="fade">
+          <div v-if="editingListing" class="modal-backdrop" @click.self="closeEdit">
+            <div class="modal-card">
+              <h3>Edit Listing</h3>
+              <form @submit.prevent="submitEditListing">
+                <label>Title
+                  <input v-model="editForm.title" required />
+                </label>
+                <label>Description
+                  <textarea v-model="editForm.description" rows="3" required></textarea>
+                </label>
+                <label>Price
+                  <input v-model.number="editForm.price" type="number" min="0" step="0.01" required />
+                </label>
+                <div class="modal-actions">
+                  <button type="submit" :disabled="savingEdit">{{ savingEdit ? 'Saving...' : 'Save' }}</button>
+                  <button type="button" class="secondary" @click="closeEdit">Cancel</button>
+                </div>
+                <p v-if="editError" class="error">{{ editError }}</p>
+              </form>
+            </div>
+          </div>
+        </transition>
 
         <!-- Orders Block -->
         <div class="card orders-card">
@@ -198,6 +223,11 @@ const loadingSellerOrders = ref(false)
 const buyerOrdersError = ref('')
 const sellerOrdersError = ref('')
 const statusMap = ref({})
+
+const editingListing = ref(null)
+const editForm = reactive({ title: '', description: '', price: 0 })
+const savingEdit = ref(false)
+const editError = ref('')
 
 watch(() => props.user, (u) => {
   if (u) {
@@ -337,96 +367,44 @@ async function deleteAccount() {
   }
 }
 
-function editListing(listing) {
-  alert('Edit listing not implemented yet. Listing ID: ' + listing.listingId)
+function openEditListing(l) {
+  editingListing.value = l
+  editError.value = ''
+  editForm.title = l.title || ''
+  editForm.description = l.description || ''
+  editForm.price = l.price || 0
+}
+
+function closeEdit() {
+  editingListing.value = null
+}
+
+async function submitEditListing() {
+  if (!editingListing.value) return
+  savingEdit.value = true
+  editError.value = ''
+  try {
+    await listingApi.updateListing(editingListing.value.listingId, {
+      title: editForm.title,
+      description: editForm.description,
+      price: editForm.price
+    })
+    await loadListings()
+    closeEdit()
+  } catch (e) {
+    editError.value = e?.response?.data || 'Failed to update listing'
+  } finally {
+    savingEdit.value = false
+  }
 }
 
 async function deleteListing(listing) {
-  // Could call DELETE /api/listings/{listingId}/user/{userId}
   if (!confirm('Delete this listing?')) return
   try {
-    await fetch(`/api/listings/${listing.listingId}/user/${props.user.userId}`, {
-      method: 'DELETE',
-      headers: { Authorization: 'Bearer ' + localStorage.getItem('token') }
-    })
+    await listingApi.deleteListingForUser(listing.listingId, props.user.userId)
     userListings.value = userListings.value.filter(l => l.listingId !== listing.listingId)
   } catch (e) {
     alert('Failed to delete')
-  }
-}
-
-function triggerFileSelect() {
-  resetMessages()
-  if (fileInput.value) fileInput.value.click()
-}
-
-function clearAvatarPreview() {
-  if (avatarPreview.value) {
-    try { URL.revokeObjectURL(avatarPreview.value) } catch {}
-    avatarPreview.value = ''
-  }
-}
-
-function onFileChosen(e) {
-  const file = e.target.files && e.target.files[0]
-  if (!file) return
-  // basic validation: max 5MB, image/*
-  if (!file.type.startsWith('image/')) {
-    errorMessage.value = 'Please select an image file'
-    return
-  }
-  const maxSize = 5 * 1024 * 1024
-  if (file.size > maxSize) {
-    errorMessage.value = 'Image must be under 5MB'
-    return
-  }
-  // Preview
-  clearAvatarPreview()
-  avatarPreview.value = URL.createObjectURL(file)
-  uploadAvatar(file)
-}
-
-async function uploadAvatar(file) {
-  uploadingAvatar.value = true
-  try {
-    const resp = await listingApi.uploadImage(file)
-    const imageUrl = resp.data?.url
-    if (!imageUrl) throw new Error('No URL returned from upload')
-
-    // Update user profile with new image URL, keep other fields
-    await userApi.updateUser(props.user.userId, {
-      userName: form.userName,
-      email: form.email,
-      profileImageUrl: imageUrl
-    })
-
-    // Refresh user data
-    try {
-      const refreshed = await userApi.getUser(props.user.userId)
-      const updatedUser = refreshed.data
-      localStorage.setItem('user', JSON.stringify(updatedUser))
-      emit('user-updated', updatedUser)
-      avatarUrl.value = updatedUser.profileImageUrl ? resolveImage(updatedUser.profileImageUrl) : './assets/logo.png'
-    } catch {/* ignore */}
-
-    successMessage.value = 'Profile picture updated'
-  } catch (e) {
-    errorMessage.value = e.response?.data || e.message || 'Upload failed'
-  } finally {
-    // Always clear preview and input so the final server image shows and no leaks
-    clearAvatarPreview()
-    uploadingAvatar.value = false
-    if (fileInput.value) fileInput.value.value = ''
-  }
-}
-
-async function deleteOrder(orderId, role){
-  if(!confirm('Remove this order?')) return
-  try{
-    await orderApi.remove(orderId)
-    if(role==='buyer') await loadBuyerOrders(); else await loadSellerOrders();
-  }catch(e){
-    alert(e?.response?.data || 'Delete failed')
   }
 }
 
@@ -538,4 +516,43 @@ function formatDate(dt) {
 .fade-enter-from, .fade-leave-to { opacity:0; }
 .btn-small{ padding:.35rem .6rem; border:none; border-radius:8px; font-weight:800; cursor:pointer; }
 .btn-small.danger{ background:#ef4444; color:#fff; }
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15,23,42,0.65);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  z-index:40;
+}
+.modal-card {
+  background:#020617;
+  border-radius:16px;
+  border:1px solid #1f2937;
+  padding:1.25rem 1.5rem;
+  width:100%;
+  max-width:420px;
+  color:#e5e7eb;
+  box-shadow:0 20px 40px rgba(15,23,42,0.7);
+}
+.modal-card h3 { margin-top:0; margin-bottom:.75rem; font-size:1.1rem; }
+.modal-card label {
+  display:block;
+  font-size:.85rem;
+  margin-bottom:.5rem;
+}
+.modal-card input,
+.modal-card textarea {
+  width:100%;
+  margin-top:.15rem;
+  padding:.4rem .5rem;
+  border-radius:8px;
+  border:1px solid #374151;
+  background:#020617;
+  color:#e5e7eb;
+}
+.modal-actions { display:flex; gap:.5rem; margin-top:.75rem; }
+.modal-actions button { flex:1; border:none; border-radius:8px; padding:.45rem .7rem; font-weight:600; cursor:pointer; }
+.modal-actions button.secondary { background:#111827; color:#e5e7eb; }
+.modal-actions button:not(.secondary) { background:#4f46e5; color:#f9fafb; }
 </style>

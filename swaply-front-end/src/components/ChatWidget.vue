@@ -1,7 +1,7 @@
 <template>
-  <div class="chat-widget">
+  <div class="chat-widget" v-if="modelOpen">
     <teleport to="body">
-      <div v-if="modelOpen" class="overlay" @click.self="emitClose">
+      <div class="overlay" @click.self="emitClose">
         <div class="panel modal">
           <header class="header">
             <strong>Direct Messages</strong>
@@ -120,7 +120,15 @@ async function loadConversations(){
     const map = {}
     for (const c of conversations.value) map[c.peerId] = c.unreadCount || 0
     unread.value = map
-  } catch (e) { console.error('load conversations failed', e) }
+  } catch (e) {
+    if (e?.response?.status === 401) {
+      // not logged in or token expired; just skip conversations instead of spamming console
+      conversations.value = []
+      unread.value = {}
+    } else {
+      console.error('load conversations failed', e)
+    }
+  }
 }
 
 function connect(){
@@ -304,15 +312,42 @@ function formatTime(ts){
   try { return new Date(ts).toLocaleString() } catch { return '' }
 }
 
+function focusPeerFromGlobal(detail){
+  if (!detail || !detail.peerId) return
+  const peerId = detail.peerId
+  const peerName = detail.peerName || `User ${peerId}`
+  // ensure user exists in conversations list
+  let c = conversations.value.find(x => x.peerId === peerId)
+  if (!c) {
+    const u = users.value.find(x => x.userId === peerId) || { userId: peerId, userName: peerName }
+    c = { peerId, peerName: u.userName, peerAvatarUrl: u.profileImageUrl, lastContent: '', lastTimestamp: null, unreadCount: 0 }
+    conversations.value.unshift(c)
+  }
+  activeUserId.value = peerId
+  unread.value[peerId] = 0
+  emitUnreadTotal()
+  ensureThreadLoaded(peerId)
+  nextTick(()=>{ if(messagesBox.value) messagesBox.value.scrollTop = messagesBox.value.scrollHeight })
+}
+
+function handleOpenChatWith(event) {
+  focusPeerFromGlobal(event.detail)
+}
+
 onMounted(()=>{
   restoreState()
   connect()
   loadUsers()
   loadConversations()
   window.addEventListener('auth-changed', onAuthChanged)
+  window.addEventListener('open-chat-with', handleOpenChatWith)
 })
 
-onBeforeUnmount(()=>{ disconnect(); window.removeEventListener('auth-changed', onAuthChanged) })
+onBeforeUnmount(()=>{
+  disconnect()
+  window.removeEventListener('auth-changed', onAuthChanged)
+  window.removeEventListener('open-chat-with', handleOpenChatWith)
+})
 
 function onAuthChanged(e){
   // refresh meId, reconnect, and reload data

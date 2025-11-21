@@ -64,6 +64,15 @@ public class CartService {
     }
 
     @Transactional
+    public void removeByListing(User user, Long listingId) {
+        Listing listing = listingRepository.findById(listingId)
+                .orElseThrow(() -> new IllegalArgumentException("Listing not found"));
+        CartItem ci = cartItemRepository.findByUserAndListing(user, listing)
+                .orElseThrow(() -> new IllegalArgumentException("Cart item not found"));
+        cartItemRepository.delete(ci);
+    }
+
+    @Transactional
     public void clear(User user) {
         cartItemRepository.deleteByUser(user);
     }

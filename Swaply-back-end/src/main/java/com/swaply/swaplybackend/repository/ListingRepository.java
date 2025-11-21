@@ -10,6 +10,8 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Repository
@@ -25,7 +27,7 @@ public interface ListingRepository extends JpaRepository<Listing, Long> {
     List<Listing> findByTitleContainingIgnoreCase(String title);
 
     //find by price range
-    List<Listing> findByPriceBetween(java.math.BigDecimal minPrice, java.math.BigDecimal maxPrice);
+    List<Listing> findByPriceBetween(BigDecimal minPrice, BigDecimal maxPrice);
 
     //filter by status + criteria
     List<Listing> findByStatusAndCategory(ListingStatus status, Category category);
@@ -44,4 +46,6 @@ public interface ListingRepository extends JpaRepository<Listing, Long> {
     //check if good exists by status
     boolean existsByListingIdAndStatus(Long listingId, ListingStatus status);
 
+    //count listings by created date range
+    long countByCreatedDateBetween(LocalDateTime start, LocalDateTime end);
 }
