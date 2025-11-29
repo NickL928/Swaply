@@ -183,8 +183,8 @@ const handleFileUpload = async (event) => {
         const url = typeof data.url === 'string' ? (data.url.startsWith('http') ? data.url : (data.url.startsWith('/') ? data.url : '/' + data.url)) : ''
         uploadedImages.value.push({
           fileName: data.fileName || file.name,
-          url: url, // normalized server path '/uploads/...'
-          preview: url // use proxied relative URL for preview to avoid CORS
+          url: url,
+          preview: url
         })
       } catch (e) {
         console.error('Upload failed for', file.name, e)
@@ -209,7 +209,7 @@ const handleSubmit = async () => {
     const user = JSON.parse(userRaw)
     const userId = user.userId || user.id
 
-    const imageUrl = uploadedImages.value[0]?.url || null // store relative path; backend expects string
+    const imageUrl = uploadedImages.value[0]?.url || null // store relative path
 
     const payload = {
       title: form.title,

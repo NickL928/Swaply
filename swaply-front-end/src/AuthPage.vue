@@ -216,7 +216,6 @@ const handleSubmit = async () => {
       successMessage.value = 'Login successful!'
       emit('login-success', data.user)
       if (!form.rememberMe) {
-        // Optionally could move token to sessionStorage; keeping localStorage for simplicity
       }
     } else {
       // registration path
@@ -551,7 +550,6 @@ const handleSubmit = async () => {
   color: #4338ca;
 }
 
-/* Mobile responsiveness */
 @media (max-width: 1024px) {
   .auth-container {
     flex-direction: column;

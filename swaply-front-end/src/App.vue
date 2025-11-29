@@ -56,7 +56,6 @@ const handleLoginSuccess = (user) => {
   currentUser.value = user
   isAuthenticated.value = true
   currentPage.value = user?.role === 'ADMIN' ? 'admin' : 'home'
-  // notify listeners (e.g., ChatWidget) that auth context changed
   window.dispatchEvent(new CustomEvent('auth-changed', { detail: { state: 'logged-in', user } }))
 }
 
@@ -72,10 +71,8 @@ const handleLogout = () => {
 
 <template>
   <div id="app">
-    <!-- Show auth screen until logged in -->
     <AuthPage v-if="!isAuthenticated" @login-success="handleLoginSuccess" />
 
-    <!-- Main app after auth -->
     <template v-else>
       <AdminPage
         v-if="currentPage === 'admin'"
