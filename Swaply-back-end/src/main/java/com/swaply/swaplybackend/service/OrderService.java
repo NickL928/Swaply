@@ -15,6 +15,7 @@ import com.swaply.swaplybackend.repository.UserRepository;
 import com.swaply.swaplybackend.entity.CartItem;
 import com.swaply.swaplybackend.repository.CartItemRepository;
 import com.swaply.swaplybackend.dto.CheckoutResponse;
+import com.swaply.swaplybackend.service.listing.ListingCacheService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -37,6 +38,9 @@ public class OrderService implements IOrderService {
 
     @Autowired
     private CartItemRepository cartItemRepository;
+
+    @Autowired
+    private ListingCacheService listingCacheService;
 
     @Override
     public OrderDto createOrder(CreateOrderDto createOrderDto) {
@@ -162,6 +166,13 @@ public class OrderService implements IOrderService {
             orderIds.add(saved.getOrderId());
             grandTotal = grandTotal.add(lineTotal);
             totalLineItems += ci.getQuantity();
+
+            // Mark listing as SOLD to prevent multiple checkouts
+            listing.setStatus(ListingStatus.SOLD);
+            listingRepository.save(listing);
+
+            // Evict from cache so it no longer appears on homepage
+            listingCacheService.evict(listing.getListingId());
         }
         cartItemRepository.deleteByUser(buyer);
         if (orderIds.isEmpty()) {

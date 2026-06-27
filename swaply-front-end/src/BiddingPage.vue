@@ -82,10 +82,10 @@
 </template>
 
 <script setup>
-// ...existing code...
 import { ref, onMounted, watch, onBeforeUnmount } from 'vue'
 import auctionApi from './services/auctionApi.js'
 import { fmtFt } from './services/currency.js'
+import { subscribeToAuction } from './services/auctionRealtime.js'
 
 const emit = defineEmits(['navigate'])
 
@@ -102,15 +102,43 @@ const load = async () => {
 }
 
 const refreshInterval = ref(null)
+let wsSubs = []
+
+const clearWsSubs = () => {
+  for (const s of wsSubs) {
+    try { s.disconnect() } catch {}
+  }
+  wsSubs = []
+}
+
+const startLiveUpdatesForList = () => {
+  clearWsSubs()
+  for (const a of (auctions.value || [])) {
+    if (!a?.auctionId) continue
+    const sub = subscribeToAuction(a.auctionId, (update) => {
+      const idx = auctions.value.findIndex(x => x.auctionId === update.auctionId)
+      if (idx === -1) return
+      auctions.value[idx] = {
+        ...auctions.value[idx],
+        currentPrice: update.currentPrice,
+        highestBidderId: update.highestBidderId,
+        highestBidderUsername: update.highestBidderUsername,
+        endTime: update.endTime
+      }
+    })
+    wsSubs.push(sub)
+  }
+}
 
 const startAutoRefresh = () => {
+  // Keep a slow fallback refresh (in case WS is blocked).
   if (refreshInterval.value) return
   refreshInterval.value = setInterval(async () => {
     try {
       const { data } = await auctionApi.getActive()
       auctions.value = data || []
     } catch (e) { /* ignore transient */ }
-  }, 15000)
+  }, 60000)
 }
 
 const ticker = ref(null)
@@ -125,9 +153,15 @@ onMounted(() => {
   ticker.value = setInterval(tick, 1000)
 })
 
+watch(auctions, () => {
+  // Re-subscribe whenever the list changes.
+  startLiveUpdatesForList()
+}, { deep: false })
+
 onBeforeUnmount(() => {
   if (refreshInterval.value) { clearInterval(refreshInterval.value); refreshInterval.value = null }
   if (ticker.value) { clearInterval(ticker.value); ticker.value = null }
+  clearWsSubs()
 })
 
 const goHome = () => emit('navigate','home')

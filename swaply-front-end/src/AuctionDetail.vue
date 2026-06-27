@@ -129,10 +129,10 @@
 </template>
 
 <script setup>
-// ...existing code...
 import { ref, onMounted, watch, onBeforeUnmount } from 'vue'
 import auctionApi from './services/auctionApi.js'
 import { fmtFt } from './services/currency.js'
+import { subscribeToAuction } from './services/auctionRealtime.js'
 
 const props = defineProps({ auctionId: { type: Number, required: true } })
 const emit = defineEmits(['navigate'])
@@ -155,20 +155,43 @@ const load = async () => {
 const ended = () => auction.value && new Date(auction.value.endTime).getTime() <= Date.now()
 
 const refreshTimer = ref(null)
+let wsSub = null
+
 const startDetailAutoRefresh = () => {
+  // Keep a slow fallback refresh (in case WS is blocked).
   if (refreshTimer.value) return
   refreshTimer.value = setInterval(async () => {
     try {
       const { data } = await auctionApi.getAuction(props.auctionId)
       auction.value = data
     } catch (e) { /* ignore transient */ }
-  }, 15000)
+  }, 60000)
 }
 
-onMounted(() => { load(); startDetailAutoRefresh() })
-watch(()=>props.auctionId, load)
+const startLiveUpdates = () => {
+  // Reconnect when auction changes.
+  try { wsSub?.disconnect() } catch {}
+  wsSub = null
 
-onBeforeUnmount(() => { if (refreshTimer.value) { clearInterval(refreshTimer.value); refreshTimer.value = null } })
+  wsSub = subscribeToAuction(props.auctionId, (update) => {
+    if (!auction.value) return
+    // Only patch the live fields.
+    auction.value.currentPrice = update.currentPrice
+    auction.value.highestBidderId = update.highestBidderId
+    auction.value.highestBidderUsername = update.highestBidderUsername
+    auction.value.endTime = update.endTime
+    setMin()
+  })
+}
+
+onMounted(() => { load(); startDetailAutoRefresh(); startLiveUpdates() })
+watch(()=>props.auctionId, async ()=>{ await load(); startLiveUpdates() })
+
+onBeforeUnmount(() => {
+  if (refreshTimer.value) { clearInterval(refreshTimer.value); refreshTimer.value = null }
+  try { wsSub?.disconnect() } catch {}
+  wsSub = null
+})
 
 const setMin = () => {
   if (!auction.value) return

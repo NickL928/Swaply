@@ -30,13 +30,16 @@ public class AuctionService implements IAuctionService {
     private final BidRepository bidRepository;
     private final ListingRepository listingRepository;
     private final UserRepository userRepository;
+    private final AuctionRealtimePublisher auctionRealtimePublisher;
 
     public AuctionService(AuctionRepository auctionRepository, BidRepository bidRepository,
-                          ListingRepository listingRepository, UserRepository userRepository) {
+                          ListingRepository listingRepository, UserRepository userRepository,
+                          AuctionRealtimePublisher auctionRealtimePublisher) {
         this.auctionRepository = auctionRepository;
         this.bidRepository = bidRepository;
         this.listingRepository = listingRepository;
         this.userRepository = userRepository;
+        this.auctionRealtimePublisher = auctionRealtimePublisher;
     }
 
     @Override
@@ -127,7 +130,12 @@ public class AuctionService implements IAuctionService {
         auction.setCurrentPrice(amount);
         auction.setHighestBidder(bidder);
         Auction updated = auctionRepository.save(auction);
-        return toDto(updated);
+        AuctionDto dto = toDto(updated);
+
+        // Push update to all subscribed clients
+        auctionRealtimePublisher.publishBidUpdate(dto);
+
+        return dto;
     }
 
     private AuctionDto toDto(Auction a) {

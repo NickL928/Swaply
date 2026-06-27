@@ -1,12 +1,10 @@
 import axios from 'axios';
 
-// Use Vite dev proxy: all API calls go through /api on the same origin
 const API_BASE = '/api';
 const LISTING_BASE = API_BASE + '/listings';
 
 const client = axios.create({
   baseURL: LISTING_BASE
-  // Do not set a fixed Content-Type so multipart can work when needed
 });
 
 client.interceptors.request.use(config => {
